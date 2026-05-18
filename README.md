@@ -24,10 +24,10 @@ project_team4-/
 │   └── pull_request_template.md    
 │
 ├── data/                           # 데이터셋 저장 폴더 (Github에서는 제외)
-     └── sprint_ai_project1_data
-      ├── test_images(.png)
-      ├── train_annotation (.json)
-      └── train_images (.png)
+|    └── sprint_ai_project1_data
+|     ├── test_images(.png)
+|     ├── train_annotation (.json)
+|     └── train_images (.png)
 |
 ├── notebook/                       # 개인 타이팅 노트북
 |
