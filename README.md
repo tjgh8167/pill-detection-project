@@ -19,7 +19,10 @@
 ```text
 project_team4-/
 │
-├── data/                      # 데이터셋 저장 폴더
+├── data/                      # 데이터셋 저장 폴더 (Github에서는 제외)
+|   ├── 이미지 파일들 (.png)
+|   └── 어노테이션 파일들 (.json)
+|
 ├── notebook/                  # 개인 타이팅 노트북
 |
 ├── src/                       # 기능별 파이썬 소스 코드
@@ -28,7 +31,8 @@ project_team4-/
 │   ├── model.py               # 모델 아키텍처 정의 (Model Architect)
 │   └── train.py               # 모델 학습 및 평가 (Experimentation Lead)
 │
-├── .gitignore                 
+├── .gitignore                 #data/
+├── download_data.py           # 데이터 다운로드 스크립트
 ├── main.py                    # 전체 파이프라인 실행 스크립트
 └── README.md                  # 프로젝트 설명서
 ```
