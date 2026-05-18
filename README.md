@@ -4,6 +4,7 @@
 - **진행 기간**: 2026년 5월 18일 ~ 2026년 6월 5일
 - **목표**: 사진 속에 있는 최대 4개의 알략의 이름(클래스)과 위치(바운딩 박스)를 검출하는 것입니다.
 - **성능 평가**: mAP@[0.75:0.95] 지표를 사용하여 모델의 성능을 측정
+- **데이터 다운(Local)**: `python3 download_data.py`
 
 ## 2. 팀원 소개 및 역할
 
@@ -19,22 +20,24 @@
 ```text
 project_team4-/
 │
-├── data/                      # 데이터셋 저장 폴더 (Github에서는 제외)
-|   ├── 이미지 파일들 (.png)
-|   └── 어노테이션 파일들 (.json)
+├── data/                           # 데이터셋 저장 폴더 (Github에서는 제외)
+     └── sprint_ai_project1_data
+      ├── test_images(.png)
+      ├── train_annotation (.json)
+      └── train_images (.png)
 |
-├── notebook/                  # 개인 타이팅 노트북
+├── notebook/                       # 개인 타이팅 노트북
 |
-├── src/                       # 기능별 파이썬 소스 코드
+├── src/                            # 기능별 파이썬 소스 코드
 │   ├── __init__.py
-│   ├── data_loader.py         # 데이터 전처리 및 로더 (Data Engineer)
-│   ├── model.py               # 모델 아키텍처 정의 (Model Architect)
-│   └── train.py               # 모델 학습 및 평가 (Experimentation Lead)
+│   ├── data_loader.py              # 데이터 전처리 및 로더 (Data Engineer)
+│   ├── model.py                    # 모델 아키텍처 정의 (Model Architect)
+│   └── train.py                    # 모델 학습 및 평가 (Experimentation Lead)
 │
-├── .gitignore                 #data/
-├── download_data.py           # 데이터 다운로드 스크립트
-├── main.py                    # 전체 파이프라인 실행 스크립트
-└── README.md                  # 프로젝트 설명서
+├── .gitignore                      #data/
+├── download_data.py                # 데이터 다운로드 스크립트
+├── main.py                         # 전체 파이프라인 실행 스크립트
+└── README.md                       # 프로젝트 설명서
 ```
 
 ## 4. 팀원 협업일지

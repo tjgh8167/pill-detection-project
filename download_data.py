@@ -3,10 +3,10 @@ import kagglehub
 import shutil
 import os
 
-def main():
+def download():
     # 프로젝트 최상위 폴더 기준의 data 폴더 경로
     target_dir = os.path.join(os.getcwd(), 'data')
-    
+
     # 이미 data 폴더가 있고 비어있지 않다면 실행 종료
     if os.path.exists(target_dir) and os.listdir(target_dir):
         print("이미 data/ 폴더에 데이터셋이 존재하므로 다운로드를 건너뜁니다.")
@@ -34,4 +34,4 @@ def main():
     print(f"데이터 다운로드 및 이동 완료: {target_dir}")
 
 if __name__ == "__main__":
-    main()
+    download()
