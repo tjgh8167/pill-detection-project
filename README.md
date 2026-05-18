@@ -1,4 +1,5 @@
 # 프로젝트미션_경구약제 이미지 객체 검출 프로젝트
+- **환경세팅**: python = 3.14.5
 
 ## 1. 프로젝트 개요
 - **진행 기간**: 2026년 5월 18일 ~ 2026년 6월 5일
@@ -19,6 +20,8 @@
 ## 3. 프로젝트 구조
 ```text
 project_team4-/
+├── .github/
+│   └── pull_request_template.md    
 │
 ├── data/                           # 데이터셋 저장 폴더 (Github에서는 제외)
      └── sprint_ai_project1_data
