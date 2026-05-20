@@ -1,7 +1,7 @@
 import os
 from datetime import datetime
 
-from src.data_loader import get_loaders
+# from src.data_loader import get_loaders
 # from src.model import get_model
 # from src.train import train_model, evaluate_model
 
@@ -28,10 +28,12 @@ def main():
 
     # 1. 데이터셋과 데이터로더 생성 (DE 파트)
     print("\n[STEP 1] 데이터셋 로딩 및 데이터로더 생성")
+    '''
     train_loader, val_loader, test_loader = get_loaders(
         data_path=DATA_PATH,
         batch_size=BATCH_SIZE,
     )
+    '''
     print(f" └─ train_loader 샘플: {len(train_loader.dataset)}개, val_loader 샘플: {len(val_loader.dataset)}개, test_loader 샘플: {len(test_loader.dataset)}개를 생성 했습니다.")
 
     # 2. 모델 생성 (MA 파트)
