@@ -115,7 +115,7 @@ class TransformedSubset(Dataset):
         return len(self.subset)
 
 
-def detection_collate_fn(batch):
+def collate(batch):
     return tuple(zip(*batch))
 
 
