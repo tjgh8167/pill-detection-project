@@ -1,3 +1,4 @@
 data/
 save_models/
 *.pt
+.DS_Store

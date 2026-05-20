@@ -31,6 +31,8 @@ project_team4-/
 |
 ├── notebook/                       # 개인 타이핑 노트북
 |
+├── saved_models/                   # 학습 후 모델 저장 폴더 (Github에서는 제외)
+|
 ├── src/                            # 기능별 파이썬 소스 코드
 │   ├── __init__.py
 │   ├── data_loader.py              # 데이터 전처리 및 로더 (Data Engineer)
@@ -50,4 +52,4 @@ project_team4-/
 | **권소현** | [Daily 협업일지 - 권소현](https://www.notion.so/AI-Daily-364f5217300d80e7955be3666c26d401) |
 | **김윤현** | ... |
 | **박종선** | ... |
-| **정서호** | ... |
+| **정서호** | [Daily 협업일지 - 정서호](https://www.notion.so/4-_-365d795f8e0780a694e8eb5dfb2606b1?source=copy_link)|
