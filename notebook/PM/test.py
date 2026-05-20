@@ -1,182 +1,295 @@
+import os
 import json
+import shutil
+import random
 from pathlib import Path
-from typing import Dict, List, Optional, Tuple
+from PIL import Image as PILImage, ImageDraw, ImageFont
 
-import torch
-from PIL import Image
-from torch.utils.data import Dataset, DataLoader, Subset, random_split
-from torchvision import transforms
+ORIGINAL_IMAGES = "/Users/apple/Desktop/project_team4/data/sprint_ai_project1_data/train_images"
+ORIGINAL_LABELS = "/Users/apple/Desktop/project_team4/data/sprint_ai_project1_data/train_annotations"
+OUTPUT_PROJECT_ROOT = "/Users/apple/Desktop/project_team4/data/PROJECT_TEAM4"
 
-class CustomCOCO:
-    def __init__(self, annotation_file: str):
-        with open(annotation_file, "r", encoding="utf-8") as f:
-            self.data = json.load(f)
-        self.images = {img["file_name"]: img for img in self.data.get("images", [])}
-        self.annotations = {}
-        for ann in self.data.get("annotations", []):
-            self.annotations.setdefault(ann["image_id"], []).append(ann)
-        self.cats = {cat["id"]: cat for cat in self.data.get("categories", [])}
+# YOLOv11 학습에 필요한 train/val 이미지 라벨 폴더 구조 생성
+def prepare_yolo_directories(output_root: Path):
+    train_img_out = output_root / "train/images"
+    train_lbl_out = output_root / "train/labels"
+    val_img_out = output_root / "val/images"
+    val_lbl_out = output_root / "val/labels"
 
-    def get_image_info(self, file_name: str) -> Optional[Dict]:
-        return self.images.get(file_name)
-
-    def get_annotations(self, image_id: int) -> List[Dict]:
-        return self.annotations.get(image_id, [])
-
-
-class COCODataset(Dataset):
-    def __init__(self, root: str, train: bool, transform=None, image_paths: Optional[List[Path]] = None):
-        self.root = Path(root)
-        self.train = train
-        self.transform = transform
-        self.image_dir = self.root / ("train_images" if train else "test_images")
-        self.annotations_root = self.root / "train_annotations" if train else None
-        self.categories = {0: "background"}
-
-        if image_paths is None:
-            self.image_paths = sorted(
-                [p for p in self.image_dir.iterdir() if p.suffix.lower() in {".png", ".jpg", ".jpeg"}]
-            )
-        else:
-            self.image_paths = list(image_paths)
-
-        self.annotation_index = self._build_annotation_index() if train else {}
-        # 💡 메모리 절약을 위해 이미지 전체를 미리 로드하지 않고 경로 리스트만 유지합니다.
-
-    def _build_annotation_index(self) -> Dict[str, Dict]:
-        index = {}
-        if self.annotations_root is None or not self.annotations_root.exists():
-            return index
-
-        for ann_file in sorted(self.annotations_root.rglob("*.json")):
-            coco = CustomCOCO(str(ann_file))
-            for file_name, img_info in coco.images.items():
-                annotations = coco.get_annotations(img_info["id"])
-                index[file_name] = {
-                    "image_info": img_info,
-                    "annotations": annotations,
-                    "categories": coco.cats,
-                }
-                for cat_id, cat in coco.cats.items():
-                    self.categories[cat_id] = cat["name"]
-        return index
-
-    def __getitem__(self, index: int) -> Tuple[torch.Tensor, Dict[str, torch.Tensor]]:
-        # 실제 배치가 요청될 때 이미지를 한 장씩 인메모리로 읽어옵니다 (OOM 방지)
-        image_path = self.image_paths[index]
-        image = Image.open(image_path).convert("RGB")
+    for path in [train_img_out, train_lbl_out, val_img_out, val_lbl_out]:
+        path.mkdir(parents=True, exist_ok=True)
         
-        target = {
-            "image_id": torch.LongTensor([index]),
-            "boxes": torch.zeros((0, 4), dtype=torch.float32),
-            "labels": torch.zeros((0,), dtype=torch.int64),
-        }
+    return train_img_out, train_lbl_out, val_img_out, val_lbl_out
 
-        if self.train:
-            ann_record = self.annotation_index.get(image_path.name)
-            if ann_record is not None:
-                boxes = []
-                labels = []
-                for ann in ann_record["annotations"]:
-                    x, y, w, h = ann["bbox"]
-                    boxes.append([x, y, x + w, y + h]) # PyTorch Faster R-CNN 포맷
-                    labels.append(ann["category_id"])
+# COCO 포맷의 JSON들을 파싱
+# .json파일 내의 알약 이름들을 자동 수집하고, YOLO 데이터셋을 생성
+def build_yolo_dataset(image_dir: str, label_dir: str, output_root: str):
+    img_src_dir = Path(image_dir)
+    lbl_src_dir = Path(label_dir)
+    root_out_dir = Path(output_root)
 
-                if boxes:
-                    target = {
-                        "image_id": torch.LongTensor([ann_record["image_info"]["id"]]),
-                        "boxes": torch.FloatTensor(boxes),
-                        "labels": torch.LongTensor(labels),
-                    }
+    # JSON 파일의 categories' 내부의 'name'이라는 알약 클래스 이름을 수집
+    json_files = list(lbl_src_dir.rglob("*.json")) + list(lbl_src_dir.rglob("*.JSON"))
+    detected_classes = set()
+    
+    # 1. COCO 포맷의 'categories' 내부에서 실제 알약 이름 수집
+    for j_file in json_files:
+        try:
+            with open(j_file, "r", encoding="utf-8") as f:
+                data = json.load(f)
+                if "categories" in data:
+                    for cat in data["categories"]:
+                        if "name" in cat:
+                            detected_classes.add(cat["name"])
+        except Exception:
+            continue
 
-        if self.transform is not None:
-            image = self.transform(image)
+    class_names = sorted(list(detected_classes))
+    if not class_names:
+        print("[오류] JSON 파일에서 알약 카테고리 이름을 찾지 못했습니다.")
+        return
+
+    print(f" └─ 총 {len(class_names)}개의 알약 클래스 발견: {class_names}")
+
+    # 2. 폴더 구조 생성
+    if root_out_dir.exists():
+        shutil.rmtree(root_out_dir)
+    prepare_yolo_directories(root_out_dir)
+
+    # 3. 이미지 파일 스캔
+    all_images = []
+    for ext in ["*.png", "*.jpg", "*.jpeg", "*.PNG", "*.JPG", "*.JPEG"]:
+        all_images.extend(list(img_src_dir.rglob(ext)))
+    
+    # 시드 고정
+    random.seed(42)
+    random.shuffle(all_images)
+    
+    split_idx = int(len(all_images) * 0.8)
+    train_images = all_images[:split_idx]
+    val_images = all_images[split_idx:]
+
+    def convert_and_copy(image_list, phase):
+        print(f"[{phase.upper()} 세트] {len(image_list)}장 변환 진행")
+        
+        # 파일명에서 공백, 하이픈, 언더바를 제거하고 소문자로 통일하여 
+        # JSON 파일들을 하나의 그룹으로 묶습니다.
+        from collections import defaultdict
+        json_groups = defaultdict(list)
+        
+        for j in json_files:
+            # 예: 'K-003351-016688...' -> 'k003351016688...'
+            normalized_name = j.name.lower().replace("-", "").replace("_", "").replace(" ", "")
+            json_groups[normalized_name].append(j)
+
+        for img_path in image_list:
+            norm_img_stem = img_path.stem.lower().replace("-", "").replace("_", "").replace(" ", "")
             
-        return image, target
+            matched_jsons = []
+            for norm_json_key, j_list in json_groups.items():
+                if norm_img_stem in norm_json_key or norm_json_key in norm_img_stem:
+                    matched_jsons.extend(j_list)
+            
+            if not matched_jsons:
+                continue
 
-    def __len__(self) -> int:
-        return len(self.image_paths)
+            new_img_path = root_out_dir / phase / "images" / img_path.name
+            new_lbl_path = root_out_dir / phase / "labels" / f"{img_path.stem}.txt"
 
+            # 이미지 복사
+            shutil.copy(img_path, new_img_path)
 
-class TransformedSubset(Dataset):
-    def __init__(self, subset: Subset, transform):
-        self.subset = subset
-        self.transform = transform
+            yolo_lines = []
 
-    def __getitem__(self, idx):
-        # 원본 데이터셋의 __getitem__을 호출하여 이미지를 가져온 뒤 transform만 재적용
-        image, target = self.subset[idx]
-        # 데이터셋 자체에 이미 텐서 변환이 들어가 있다면 중복 적용 안 되도록 유의
-        if self.transform is not None:
-            image = self.transform(image)
-        return image, target
+            for json_path in matched_jsons:
+                with open(json_path, "r", encoding="utf-8") as f:
+                    ann_data = json.load(f)
 
-    def __len__(self):
-        return len(self.subset)
+                json_id_to_name = {cat["id"]: cat["name"] for cat in ann_data.get("categories", [])}
+                
+                for cat_name in json_id_to_name.values():
+                    if cat_name not in class_names:
+                        class_names.append(cat_name)
 
+                images_list = ann_data.get("images", [])
+                if isinstance(images_list, dict):
+                    images_list = [images_list]
+                
+                img_w, img_h = 976, 1280
+                if images_list:
+                    img_w = images_list[0].get("width") or 976
+                    img_h = images_list[0].get("height") or 1280
 
-def collate(batch):
-    return tuple(zip(*batch))
+                annotations = ann_data.get("annotations", [])
+                for ann in annotations:
+                    cat_id = ann.get("category_id")
+                    cat_name = json_id_to_name.get(cat_id)
+                    
+                    if not cat_name:
+                        cat_name = f"Unknown_Cat_{cat_id}"
+                    if cat_name not in class_names:
+                        class_names.append(cat_name)
+                        
+                    class_id = class_names.index(cat_name)
 
+                    bbox = ann.get("bbox") 
+                    if bbox and len(bbox) == 4:
+                        x, y, w, h = bbox[0], bbox[1], bbox[2], bbox[3]
+                        
+                        if None in [x, y, w, h]: 
+                            continue
+                        
+                        # YOLO 표준 정규화 좌표 계산
+                        x_center = (x + w / 2) / img_w
+                        y_center = (y + h / 2) / img_h
+                        norm_w = w / img_w
+                        norm_h = h / img_h
 
-def get_loaders(
-    data_path: str,
-    batch_size: int = 16,
-    val_split: float = 0.2,
-    seed: int = 42,
-) -> Tuple[DataLoader, DataLoader, DataLoader]:
+                        if x_center > 1.0 or y_center > 1.0 or norm_w > 1.0 or norm_h > 1.0:
+                            continue
+
+                        # 클래스 ID와 정규화된 좌표 저장
+                        line_str = f"{class_id} {x_center:.6f} {y_center:.6f} {norm_w:.6f} {norm_h:.6f}"
+                        if line_str not in yolo_lines:  # 중복 저장 방지
+                            yolo_lines.append(line_str)
+
+            # 💡 최종 병합된 좌표가 있을 때만 파일 쓰기
+            if yolo_lines:
+                with open(new_lbl_path, "w", encoding="utf-8") as lf:
+                    lf.write("\n".join(yolo_lines))
+
+    convert_and_copy(train_images, "train")
+    convert_and_copy(val_images, "val")
+
+    # 4. 최종 data.yaml 작성
+    yaml_path = root_out_dir / "data.yaml"
+    with open(yaml_path, "w", encoding="utf-8") as yf:
+        yf.write(f"path: {root_out_dir.resolve()}\n")
+        yf.write("train: train/images\n")
+        yf.write("val: val/images\n\n")
+        yf.write(f"nc: {len(class_names)}\n")
+        yf.write(f"names: {class_names}\n")
+        
+    print(f"[완료] YOLO 포맷 데이터셋 .yaml 파일 생성 / 저장경로 -> {yaml_path}")
+
+# data.yaml 파일이 없거나 데이터셋이 미완성이면 자동으로 빌드한 뒤 생성
+def load_yolo_data_config(yaml_path: str) -> dict:
+    yaml_file_path = Path(yaml_path)
     
-    # 데이터 증강 (Augmentation) 정의
-    train_transform = transforms.Compose([
-        transforms.ColorJitter(brightness=0.2, contrast=0.2, saturation=0.2, hue=0.05),
-        transforms.RandomGrayscale(p=0.1),
-        transforms.PILToTensor(),
-        transforms.ConvertImageDtype(dtype=torch.float),
-    ])
+    if not yaml_file_path.exists() or not (yaml_file_path.parent / "train/images").exists():
+        
+        build_yolo_dataset(
+            image_dir=ORIGINAL_IMAGES,
+            label_dir=ORIGINAL_LABELS,
+            output_root=OUTPUT_PROJECT_ROOT
+        )
 
-    val_transform = transforms.Compose([
-        transforms.PILToTensor(),
-        transforms.ConvertImageDtype(dtype=torch.float),
-    ])
-    test_transform = val_transform
+    config = {}
+    with open(yaml_path, "r", encoding="utf-8") as f:
+        for line in f:
+            line = line.strip()
+            if not line or line.startswith("#"):
+                continue
+            if ":" in line:
+                key, val = line.split(":", 1)
+                key = key.strip()
+                val = val.strip()
+                if val.startswith("[") and val.endswith("]"):
+                    val = [item.strip().strip("'").strip('"') for item in val[1:-1].split(",")]
+                elif val.isdigit():
+                    val = int(val)
+                config[key] = val
+                
+    return {
+        "root": config.get("path"),
+        "train_dir": config.get("train"),
+        "val_dir": config.get("val"),
+        "nc": config.get("nc"),
+        "names": config.get("names", [])
+    }
 
-    # Train / Val 분리
-    full_train_dataset = COCODataset(data_path, train=True, transform=None)
-    total = len(full_train_dataset)
-    val_len = int(total * val_split)
-    train_len = total - val_len
+# YAML 파일의 내용을 바탕으로 실제 경로와 클래스 수 등을 검증
+def validate_yolo_data_config(config: dict):
+    if not config["root"]:
+        raise ValueError("YAML 파일에 'path' 설정이 누락되었습니다.")
+        
+    root_path = Path(config["root"])
+    train_path = root_path / config["train_dir"]
+    val_path = root_path / config["val_dir"]
     
-    train_subset, val_subset = random_split(
-        full_train_dataset,
-        [train_len, val_len],
-        generator=torch.Generator().manual_seed(seed),
+    if not train_path.exists() or not val_path.exists():
+        raise FileNotFoundError("YAML에 적힌 물리적인 train/val 이미지 디렉토리를 찾을 수 없습니다.")
+        
+    if config["nc"] != len(config["names"]):
+        raise ValueError("YAML 내 nc(클래스 수)와 names 배열의 크기가 일치하지 않습니다.")
+
+# 학습셋 중 이미지와 어노테이션 매칭이 잘 됐는지 시각적 검증 함수 제작 (필요시에만 실행)
+def verify_yolo_conversion(yaml_config: dict):
+    root_path = Path(yaml_config["root"])
+    train_img_dir = root_path / yaml_config["train_dir"]
+    train_lbl_dir = root_path / yaml_config["train_dir"].replace("images", "labels")
+    class_names = yaml_config["names"]
+
+    img_files = []
+    for ext in ["*.png", "*.jpg", "*.PNG", "*.JPG"]:
+        img_files.extend(list(train_img_dir.glob(ext)))
+        
+    if not img_files:
+        print("검증할 이미지를 찾을 수 없습니다.")
+        return
+
+    sample_img_path = random.choice(img_files)
+    sample_lbl_path = train_lbl_dir / f"{sample_img_path.stem}.txt"
+
+    if not sample_lbl_path.exists():
+        print(f"{sample_img_path.name}에 매칭되는 라벨 파일이 없습니다.")
+        return
+
+    print(f"\n[검증 진행] 샘플 이미지 대상: {sample_img_path.name}")
+
+    img = PILImage.open(sample_img_path)
+    draw = ImageDraw.Draw(img)
+    img_w, img_h = img.size
+
+    try:
+        font_path = "/System/Library/Fonts/Supplemental/AppleGothic.ttf"
+        font = ImageFont.truetype(font_path, 24)
+    except IOError:
+        font = None
+
+    with open(sample_lbl_path, "r", encoding="utf-8") as f:
+        lines = f.readlines()
+
+    print(f" └─ 이 이미지에서 발견된 총 박스 수: {len(lines)}개")
+
+    for line in lines:
+        parts = line.strip().split()
+        if len(parts) != 5:
+            continue
+            
+        class_id = int(parts[0])
+        x_center, y_center, norm_w, norm_h = map(float, parts[1:])
+
+        w = norm_w * img_w
+        h = norm_h * img_h
+        x1 = int((x_center * img_w) - (w / 2))
+        y1 = int((y_center * img_h) - (h / 2))
+        x2 = int(x1 + w)
+        y2 = int(y1 + h)
+
+        draw.rectangle([x1, y1, x2, y2], outline="red", width=5)
+        label_text = class_names[class_id] if class_id < len(class_names) else f"Class {class_id}"
+        draw.text((x1 + 5, y1 - 32), label_text, fill="red", font=font)
+
+    # 시각화 이미지 저장
+    output_path = root_path / "verification_sample.png"
+    img.save(output_path)
+    print(f" └─ 검증 시각화 완료: {output_path.resolve()}")
+
+
+if __name__ == "__main__":
+    build_yolo_dataset(
+        image_dir=ORIGINAL_IMAGES,
+        label_dir=ORIGINAL_LABELS,
+        output_root=OUTPUT_PROJECT_ROOT
     )
-
-    train_dataset = TransformedSubset(train_subset, train_transform)
-    val_dataset = TransformedSubset(val_subset, val_transform)
-    test_dataset = COCODataset(data_path, train=False, transform=test_transform)
-
-    # 💡 [수정] 전역 변수 BATCH_SIZE 대신 인자로 받은 소문자 batch_size를 연결했습니다.
-    train_loader = DataLoader(
-        train_dataset, batch_size=batch_size, shuffle=True,
-        collate_fn=detection_collate_fn, num_workers=2, pin_memory=True
-    )
-    val_loader = DataLoader(
-        val_dataset, batch_size=batch_size, shuffle=False,
-        collate_fn=detection_collate_fn, num_workers=2, pin_memory=True
-    )
-    test_loader = DataLoader(
-        test_dataset, batch_size=batch_size, shuffle=False,
-        collate_fn=detection_collate_fn, num_workers=2, pin_memory=True
-    )
-
-    return train_loader, val_loader, test_loader
-
-DATA_PATH = "./data/sprint_ai_project1_data"
-BATCH_SIZE = 16
-
-train_loader, val_loader, test_loader = get_loaders(
-        data_path=DATA_PATH,
-        batch_size=BATCH_SIZE)
-
-print(f" └─ train_loader: {len(train_loader.dataset)} samples, val_loader: {len(val_loader.dataset)} samples, test_loader: {len(test_loader.dataset)} samples")
