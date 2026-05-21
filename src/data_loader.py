@@ -5,9 +5,10 @@ import random
 from pathlib import Path
 from PIL import Image as PILImage, ImageDraw, ImageFont
 
-ORIGINAL_IMAGES = "/Users/apple/Desktop/project_team4/data/sprint_ai_project1_data/train_images"
-ORIGINAL_LABELS = "/Users/apple/Desktop/project_team4/data/sprint_ai_project1_data/train_annotations"
-OUTPUT_PROJECT_ROOT = "/Users/apple/Desktop/project_team4/data/TRAIN_VAL_DATASET"
+BASE_DIR = Path(__file__).resolve().parent
+ORIGINAL_IMAGES = BASE_DIR / "../data/sprint_ai_project1_data/train_images"
+ORIGINAL_LABELS = BASE_DIR / "../data/sprint_ai_project1_data/train_annotations"
+OUTPUT_PROJECT_ROOT = BASE_DIR / "../data/TRAIN_VAL_DATASET"
 
 # YOLOv11 학습에 필요한 train/val 이미지 라벨 폴더 구조 생성
 def prepare_yolo_directories(output_root: Path):
@@ -23,10 +24,10 @@ def prepare_yolo_directories(output_root: Path):
 
 # COCO 포맷의 JSON들을 파싱
 # .json파일 내의 알약 이름들을 자동 수집하고, YOLO 데이터셋을 생성
-def build_yolo_dataset(image_dir: str, label_dir: str, output_root: str):
-    img_src_dir = Path(image_dir)
-    lbl_src_dir = Path(label_dir)
-    root_out_dir = Path(output_root)
+def build_yolo_dataset(image_dir: Path, label_dir: Path, output_root: Path):
+    img_src_dir = image_dir
+    lbl_src_dir = label_dir
+    root_out_dir = output_root
 
     # JSON 파일의 categories' 내부의 'name'이라는 알약 클래스 이름을 수집
     json_files = list(lbl_src_dir.rglob("*.json")) + list(lbl_src_dir.rglob("*.JSON"))
