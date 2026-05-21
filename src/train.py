@@ -11,7 +11,10 @@ def train_model(
     lr=1e-4,
     weight_decay=1e-4,
     optimizer_name="Adam",
-    experiment_name="train"
+    experiment_name="train",
+    seed=42,
+    mosaic=1.0,
+    degrees=15.0
 ):
     """
     YOLOv11 모델 학습 함수
@@ -33,6 +36,9 @@ def train_model(
     - weight_decay: weight decay
     - optimizer_name: optimizer 이름
     - experiment_name: 저장될 실험 폴더 이름
+    - seed: 실험 재현성을 위한 난수 고정값
+    - mosaic: mosaic augmentation 강도
+    - degrees: 이미지 회전 augmentation 범위
 
     반환:
     - model: 학습된 YOLO 모델
