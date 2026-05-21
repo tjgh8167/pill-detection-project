@@ -49,6 +49,7 @@ def build_yolo_dataset(image_dir: str, label_dir: str, output_root: str):
         print("[오류] JSON 파일에서 알약 카테고리 이름을 찾지 못했습니다.")
         return
 
+
     # 2. 폴더 구조 생성
     if root_out_dir.exists():
         shutil.rmtree(root_out_dir)
@@ -258,6 +259,7 @@ def verify_yolo_conversion(yaml_config: dict):
     with open(sample_lbl_path, "r", encoding="utf-8") as f:
         lines = f.readlines()
 
+    print(f" └─ 이 이미지에서 발견된 총 박스 수: {len(lines)}개")
 
     for line in lines:
         parts = line.strip().split()
