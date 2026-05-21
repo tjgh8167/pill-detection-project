@@ -51,5 +51,5 @@ project_team4-/
 | :--- | :--- |
 | **권소현** | [Daily 협업일지 - 권소현](https://www.notion.so/AI-Daily-364f5217300d80e7955be3666c26d401) |
 | **김윤현** | ... |
-| **박종선** | [Daily 협업일지 - 박종선](https://www.notion.so/366761f85857814ebcb5f6c5242f895a?source=copy_link) |
+| **박종선** | ... |
 | **정서호** | [Daily 협업일지 - 정서호](https://www.notion.so/4-_-365d795f8e0780a694e8eb5dfb2606b1?source=copy_link)|

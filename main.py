@@ -29,7 +29,7 @@ def main():
     # 1. YOLOv11 데이터 구성 파일 로딩 (DE 파트)
     print("\n[STEP 1] YOLO 데이터 구성 파일 로딩")
 
-    DATA_YAML = "/Users/apple/Desktop/project_team4/data/TRAIN_VAL_DATASET/data.yaml"
+    DATA_YAML = BASE_DIR / "data/TRAIN_VAL_DATASET/data.yaml"
 
     data_config = load_yolo_data_config(DATA_YAML)
     validate_yolo_data_config(data_config)
