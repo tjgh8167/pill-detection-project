@@ -1,7 +1,8 @@
 import os
 from datetime import datetime
+from pathlib import Path
 
-from src.data_loader import get_loaders
+from src.data_loader import load_yolo_data_config, validate_yolo_data_config, verify_yolo_conversion
 # from src.model import get_model
 # from src.train import train_model, evaluate_model
 
@@ -9,7 +10,6 @@ from src.data_loader import get_loaders
 def main():
 
     # 하이퍼파라미터 및 설정값 정의
-    DATA_PATH = "/Users/apple/Desktop/project_team4/data/sprint_ai_project1_data"
     BATCH_SIZE = 16
 
     EPOCHS = 50
@@ -17,22 +17,27 @@ def main():
     WEIGHT_DECAY = 1e-4
 
     OPTIMIZER = "Adam"
-    LOSS_FUNCTION = "CrossEntropyLoss" 
 
     # 모델과 학습 결과를 저장할 디렉토리 생성(시간별 폴더 생성)
+    BASE_DIR = Path(__file__).resolve().parent
     current_time = datetime.now().strftime("%Y%m%d_%H%M%S")
-    SAVE_DIR = f"/Users/apple/Desktop/project_team4/saved_models/{current_time}"
+    SAVE_DIR = BASE_DIR / "saved_models" / current_time
     os.makedirs(SAVE_DIR, exist_ok=True)
     
     print("[RUN] 프로젝트 파이프라인 가동")
 
-    # 1. 데이터셋과 데이터로더 생성 (DE 파트)
-    print("\n[STEP 1] 데이터셋 로딩 및 데이터로더 생성")
-    train_loader, val_loader, test_loader = get_loaders(
-        data_path=DATA_PATH,
-        batch_size=BATCH_SIZE,
-    )
-    print(f" └─ train_loader 샘플: {len(train_loader.dataset)}개, val_loader 샘플: {len(val_loader.dataset)}개, test_loader 샘플: {len(test_loader.dataset)}개를 생성 했습니다.")
+    # 1. YOLOv11 데이터 구성 파일 로딩 (DE 파트)
+    print("\n[STEP 1] YOLO 데이터 구성 파일 로딩")
+
+    DATA_YAML = BASE_DIR / "data/TRAIN_VAL_DATASET/data.yaml"
+
+    data_config = load_yolo_data_config(DATA_YAML)
+    validate_yolo_data_config(data_config)
+    
+    print(f" └─ YOLO 데이터 구성 확인이 완료되었습니다.: root={data_config['root']}")
+
+    # 데이터 구성 후 YOLO 형식으로 변환이 제대로 되었는지 검증용 코드 (필요시 사용)
+    # verify_yolo_conversion(data_config)
 
     # 2. 모델 생성 (MA 파트)
     print("[STEP 2] 모델 생성")
@@ -52,7 +57,6 @@ def main():
         lr=LEARNING_RATE,
         weight_decay=WEIGHT_DECAY,
         optimizer_name=OPTIMIZER,
-        loss_fn=LOSS_FUNCTION,
         save_dir=SAVE_DIR
     )
     '''
