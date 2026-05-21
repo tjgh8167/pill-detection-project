@@ -7,7 +7,7 @@ from PIL import Image as PILImage, ImageDraw, ImageFont
 
 ORIGINAL_IMAGES = "/Users/apple/Desktop/project_team4/data/sprint_ai_project1_data/train_images"
 ORIGINAL_LABELS = "/Users/apple/Desktop/project_team4/data/sprint_ai_project1_data/train_annotations"
-OUTPUT_PROJECT_ROOT = "/Users/apple/Desktop/project_team4/data/PROJECT_TEAM4"
+OUTPUT_PROJECT_ROOT = "/Users/apple/Desktop/project_team4/data/TRAIN_VAL_DATASET"
 
 # YOLOv11 학습에 필요한 train/val 이미지 라벨 폴더 구조 생성
 def prepare_yolo_directories(output_root: Path):
@@ -49,7 +49,6 @@ def build_yolo_dataset(image_dir: str, label_dir: str, output_root: str):
         print("[오류] JSON 파일에서 알약 카테고리 이름을 찾지 못했습니다.")
         return
 
-    print(f" └─ 총 {len(class_names)}개의 알약 클래스 발견: {class_names}")
 
     # 2. 폴더 구조 생성
     if root_out_dir.exists():
@@ -153,7 +152,7 @@ def build_yolo_dataset(image_dir: str, label_dir: str, output_root: str):
                         if line_str not in yolo_lines:  # 중복 저장 방지
                             yolo_lines.append(line_str)
 
-            # 💡 최종 병합된 좌표가 있을 때만 파일 쓰기
+            # 최종 병합된 좌표가 있을 때만 파일 쓰기
             if yolo_lines:
                 with open(new_lbl_path, "w", encoding="utf-8") as lf:
                     lf.write("\n".join(yolo_lines))

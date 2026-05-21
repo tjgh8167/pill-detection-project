@@ -1,7 +1,7 @@
 import os
 from datetime import datetime
 
-# from src.data_loader import load_yolo_data_config, validate_yolo_data_config, verify_yolo_conversion
+from src.data_loader import load_yolo_data_config, validate_yolo_data_config, verify_yolo_conversion
 # from src.model import get_model
 # from src.train import train_model, evaluate_model
 
@@ -26,16 +26,16 @@ def main():
 
     # 1. YOLOv11 데이터 구성 파일 로딩 (DE 파트)
     print("\n[STEP 1] YOLO 데이터 구성 파일 로딩")
-    
-    DATA_YAML = "/Users/apple/Desktop/project_team4/data/PROJECT_TEAM4/data.yaml"
+
+    DATA_YAML = "/Users/apple/Desktop/project_team4/data/TRAIN_VAL_DATASET/data.yaml"
+
     data_config = load_yolo_data_config(DATA_YAML)
     validate_yolo_data_config(data_config)
     
-    print(f" └─ YOLO data.yaml loaded: root={data_config['root']}")
-    print(f" └─ Paths: train_dir={data_config['train_dir']}, val_dir={data_config['val_dir']}")
-    print(f" └─ Classes: nc={data_config['nc']} ({data_config['nc']}개 알약 클래스 확인)")
-    print(" └─ YOLO 데이터 구성 확인이 완료되었습니다.")
-    verify_yolo_conversion(data_config)
+    print(f" └─ YOLO 데이터 구성 확인이 완료되었습니다.: root={data_config['root']}")
+
+    # 데이터 구성 후 YOLO 형식으로 변환이 제대로 되었는지 검증용 코드 (필요시 사용)
+    # verify_yolo_conversion(data_config)
 
     # 2. 모델 생성 (MA 파트)
     print("[STEP 2] 모델 생성")
