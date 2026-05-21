@@ -1,4 +1,4 @@
 data/
 save_models/
-.DS_Store
 *.pt
+.DS_Store
