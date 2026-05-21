@@ -2,3 +2,6 @@ data/
 save_models/
 *.pt
 .DS_Store
+g
+__pycache__/
+*.pyc
