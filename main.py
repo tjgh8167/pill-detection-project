@@ -1,5 +1,6 @@
 import os
 from datetime import datetime
+from pathlib import Path
 
 from src.data_loader import load_yolo_data_config, validate_yolo_data_config, verify_yolo_conversion
 # from src.model import get_model
@@ -18,8 +19,9 @@ def main():
     OPTIMIZER = "Adam"
 
     # 모델과 학습 결과를 저장할 디렉토리 생성(시간별 폴더 생성)
+    BASE_DIR = Path(__file__).resolve().parent
     current_time = datetime.now().strftime("%Y%m%d_%H%M%S")
-    SAVE_DIR = f"/Users/apple/Desktop/project_team4/saved_models/{current_time}"
+    SAVE_DIR = BASE_DIR / "saved_models" / current_time
     os.makedirs(SAVE_DIR, exist_ok=True)
     
     print("[RUN] 프로젝트 파이프라인 가동")
@@ -27,7 +29,7 @@ def main():
     # 1. YOLOv11 데이터 구성 파일 로딩 (DE 파트)
     print("\n[STEP 1] YOLO 데이터 구성 파일 로딩")
 
-    DATA_YAML = "/Users/apple/Desktop/project_team4/data/TRAIN_VAL_DATASET/data.yaml"
+    DATA_YAML = BASE_DIR / "data/TRAIN_VAL_DATASET/data.yaml"
 
     data_config = load_yolo_data_config(DATA_YAML)
     validate_yolo_data_config(data_config)
