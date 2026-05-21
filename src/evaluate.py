@@ -7,7 +7,8 @@ def evaluate_model(
     save_dir,
     imgsz=640,
     batch_size=16,
-    experiment_name="val"
+    experiment_name="val",
+    augment=True
 ):
     """
     YOLOv11 모델 평가 함수
@@ -16,6 +17,7 @@ def evaluate_model(
     - validation set 기준으로 모델 성능 평가
     - precision, recall, mAP 계산
     - confusion matrix, PR curve 등 평가 결과 자동 저장
+    - augment 옵션을 통해 TTA 적용 가능
 
     인자:
     - model: 학습된 YOLO 모델
@@ -24,6 +26,8 @@ def evaluate_model(
     - imgsz: 입력 이미지 크기
     - batch_size: batch size
     - experiment_name: 평가 결과 폴더 이름
+    - augment: 검증 시 TTA 적용 여부
+
 
     반환:
     - metrics: Ultralytics validation 결과 객체
@@ -44,13 +48,20 @@ def evaluate_model(
         batch=batch_size,
         project=str(save_dir),
         name=experiment_name,
-        exist_ok=True
+        exist_ok=True,
+        augment=augment
     )
 
     print("검증 평가 완료")
     print(f"평가 결과 저장 위치: {save_dir}/{experiment_name}")
 
+    print("========== 핵심 평가 지표 ==========")
+    print(f"mAP@50: {metrics.box.map50:.4f}")
+    print(f"mAP@[0.75:0.95]: {metrics.box.map:.4f}")
+    print("====================================")
+
     return metrics
+
 
 
 def predict_and_visualize(
@@ -59,7 +70,10 @@ def predict_and_visualize(
     save_dir,
     imgsz=640,
     conf=0.25,
-    experiment_name="predict"
+    experiment_name="predict",
+    augment=True,
+    save_crop=True,
+    save_txt=True
 ):
     """
     YOLOv11 예측 및 시각화 함수
@@ -75,6 +89,8 @@ def predict_and_visualize(
     - imgsz: 입력 이미지 크기
     - conf: confidence threshold
     - experiment_name: 예측 결과 폴더 이름
+    - save_crop: 예측 객체 crop 이미지 저장 여부
+    - save_txt: 예측 bbox txt 저장 여부
 
     반환:
     - predictions: Ultralytics 예측 결과 리스트
@@ -86,6 +102,9 @@ def predict_and_visualize(
     print(f"Source: {source}")
     print(f"Image Size: {imgsz}")
     print(f"Confidence Threshold: {conf}")
+    print(f"Augment: {augment}")
+    print(f"Save Crop: {save_crop}")
+    print(f"Save TXT: {save_txt}")
     print(f"Save Dir: {save_dir}")
     print("====================================")
 
@@ -96,10 +115,13 @@ def predict_and_visualize(
         save=True,
         project=str(save_dir),
         name=experiment_name,
-        exist_ok=True
+        exist_ok=True,
+        augment=augment,
+        save_crop=save_crop,
+        save_txt=save_txt
     )
 
     print("예측 및 시각화 완료")
-    print(f"예측 이미지 저장 위치: {save_dir}/{experiment_name}")
+    print(f"예측 결과 저장 위치: {save_dir}/{experiment_name}")
 
     return predictions
