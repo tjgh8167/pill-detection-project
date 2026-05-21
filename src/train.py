@@ -56,6 +56,10 @@ def train_model(
     print(f"Weight Decay: {weight_decay}")
     print(f"Optimizer: {optimizer_name}")
     print(f"Save Dir: {save_dir}")
+    print(f"Seed: {seed}")
+    print(f"Mosaic: {mosaic}")
+    print(f"Degrees: {degrees}")
+
     print("==================================")
 
     results = model.train(
@@ -68,7 +72,10 @@ def train_model(
         optimizer=optimizer_name,
         project=str(save_dir),
         name=experiment_name,
-        exist_ok=True
+        exist_ok=True, 
+        seed=seed,
+        mosaic=mosaic,
+        degrees=degrees
     )
 
     print("학습 완료")
