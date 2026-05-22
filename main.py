@@ -3,9 +3,9 @@ from datetime import datetime
 from pathlib import Path
 
 from src.data_loader import load_yolo_data_config, validate_yolo_data_config, verify_yolo_conversion
-# from src.model import get_model
-# from src.train import train_model, evaluate_model
-
+from src.model import get_model
+from src.train import train_model
+from src.evaluate import evaluate_model, predict_and_visualize
 
 def main():
 
@@ -17,6 +17,9 @@ def main():
     WEIGHT_DECAY = 1e-4
 
     OPTIMIZER = "Adam"
+    IMAGE_SIZE = 320
+    CONF_THRESHOLD = 0.25
+
 
     # 모델과 학습 결과를 저장할 디렉토리 생성(시간별 폴더 생성)
     BASE_DIR = Path(__file__).resolve().parent
@@ -54,10 +57,14 @@ def main():
         train_loader=train_loader,
         val_loader=val_loader,
         epochs=EPOCHS,
+        batch_size=BATCH_SIZE,
+        imgsz=IMAGE_SIZE,
+        save_dir=SAVE_DIR,
         lr=LEARNING_RATE,
         weight_decay=WEIGHT_DECAY,
         optimizer_name=OPTIMIZER,
         save_dir=SAVE_DIR
+        experiment_name="train"
     )
     '''
     print(" └─ 학습 및 Loss 그래프, 모델 저장이 완료되었습니다.")
@@ -66,9 +73,24 @@ def main():
     # 시각화 결과 저장 (아무것도 안그려진 원본 이미지 / 예측 바운딩 박스 결과 비교 이미지)
     print("[STEP 4] 테스트 평가 및 시각화 저장")
     '''
-    test_results = evaluate_model(
-        model=trained_model, 
-        test_loader=test_loader)
+    metrics = evaluate_model(
+        model=trained_model,
+        data_yaml=DATA_YAML,
+        save_dir=SAVE_DIR,
+        imgsz=IMAGE_SIZE,
+        batch_size=BATCH_SIZE,
+        experiment_name="val"
+    )
+
+    predict_results = predict_and_visualize(
+        model=trained_model,
+        source=Path(data_config["root"]) / data_config["val_dir"],
+        save_dir=SAVE_DIR,
+        imgsz=IMAGE_SIZE,
+        conf=CONF_THRESHOLD,
+        experiment_name="predict"
+    )
+
     '''
     print(" └─ 테스트 평가 및 시각화 저장이 완료되었습니다.")
 
