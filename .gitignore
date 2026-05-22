@@ -5,3 +5,6 @@ save_models/
 g
 __pycache__/
 *.pyc
+*.jpg
+*.png
+*.csv
