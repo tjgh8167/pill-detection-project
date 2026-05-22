@@ -22,41 +22,44 @@ def prepare_yolo_directories(output_root: Path):
         
     return train_img_out, train_lbl_out, val_img_out, val_lbl_out
 
-# COCO 포맷의 JSON들을 파싱
-# .json파일 내의 알약 이름들을 자동 수집하고, YOLO 데이터셋을 생성
+# COCO 포맷의 JSON들을 파싱하여 YOLO 데이터셋 생성
 def build_yolo_dataset(image_dir: Path, label_dir: Path, output_root: Path):
     img_src_dir = image_dir
     lbl_src_dir = label_dir
     root_out_dir = output_root
 
-    # JSON 파일의 categories' 내부의 'name'이라는 알약 클래스 이름을 수집
     json_files = list(lbl_src_dir.rglob("*.json")) + list(lbl_src_dir.rglob("*.JSON"))
-    detected_classes = set()
     
-    # 1. COCO 포맷의 'categories' 내부에서 실제 알약 이름 수집
-    categories_map = {}
+    # ---------------------------------------------------------------- #
+    # ⭐ [수정 완료] 진짜 존재하는 카테고리 정보만 딕셔너리로 완벽하게 수집
+    # ---------------------------------------------------------------- #
+    real_categories = {}  # {대회_original_id: "알약이름"}
     for j_file in json_files:
         try:
             with open(j_file, "r", encoding="utf-8") as f:
                 data = json.load(f)
                 if "categories" in data:
                     for cat in data["categories"]:
-                        categories_map[int(cat["id"])] = cat["name"]
+                        real_categories[int(cat["id"])] = cat["name"]
         except Exception:
             continue
 
-    if not categories_map:
+    if not real_categories:
         print("[오류] JSON 파일에서 알약 카테고리 이름을 찾지 못했습니다.")
         return
 
-    # 대회 ID 체계를 그대로 유지하기 위해 고정된 리스트 생성
-    # (YOLO는 0번부터 시작하므로 max_id + 1 크기로 만듭니다)
-    max_id = max(categories_map.keys())
-    class_names = [categories_map.get(i, f"unknown_{i}") for i in range(max_id + 1)]
+    # 대회 오리지널 ID를 오름차순으로 정렬하여 유령 unknown_X 생성을 원천 차단합니다.
+    sorted_original_ids = sorted(list(real_categories.keys()))
     
-    if not class_names:
-        print("[오류] JSON 파일에서 알약 카테고리 이름을 찾지 못했습니다.")
-        return
+    # data.yaml에 깔끔하게 들어갈 실제 알약 이름 목록 (예: 56개, 80개 등 실제 개수만큼만 생성)
+    class_names = [real_categories[orig_id] for orig_id in sorted_original_ids]
+    
+    # 거대한 원본 ID를 YOLO 학습용 0번 기반 인덱스로 압축 매핑하는 테이블
+    # 예: {41769: 0, 41800: 1, ...}
+    original_to_yolo_id = {orig_id: idx for idx, orig_id in enumerate(sorted_original_ids)}
+
+    print(f"\n[안내] 발견된 실제 클래스 개수: {len(class_names)}개")
+    print(f"[안내] 매핑된 원본 ID 예시 (앞 5개): {sorted_original_ids[:5]}\n")
 
     # 2. 폴더 구조 생성
     if root_out_dir.exists():
@@ -79,13 +82,10 @@ def build_yolo_dataset(image_dir: Path, label_dir: Path, output_root: Path):
     def convert_and_copy(image_list, phase):
         print(f"[{phase.upper()} 세트] {len(image_list)}장 변환 진행")
         
-        # 파일명에서 공백, 하이픈, 언더바를 제거하고 소문자로 통일하여 
-        # JSON 파일들을 하나의 그룹으로 묶습니다.
         from collections import defaultdict
         json_groups = defaultdict(list)
         
         for j in json_files:
-            # 예: 'K-003351-016688...' -> 'k003351016688...'
             normalized_name = j.name.lower().replace("-", "").replace("_", "").replace(" ", "")
             json_groups[normalized_name].append(j)
 
@@ -112,9 +112,6 @@ def build_yolo_dataset(image_dir: Path, label_dir: Path, output_root: Path):
                 with open(json_path, "r", encoding="utf-8") as f:
                     ann_data = json.load(f)
 
-                # 개별 파일 안에서 다시 수집하던 로직 제거 (위에서 통틀어 맞췄으므로 필요 없음)
-                json_id_to_name = {cat["id"]: cat["name"] for cat in ann_data.get("categories", [])}
-                
                 images_list = ann_data.get("images", [])
                 if isinstance(images_list, dict):
                     images_list = [images_list]
@@ -126,10 +123,14 @@ def build_yolo_dataset(image_dir: Path, label_dir: Path, output_root: Path):
 
                 annotations = ann_data.get("annotations", [])
                 for ann in annotations:
-                    cat_id = ann.get("category_id")
+                    cat_id = int(ann.get("category_id"))
                     
-                    # 💡 핵심 수정: index() 함수를 쓰지 않고, JSON 고유 ID를 그대로 YOLO 클래스 ID로 씁니다.
-                    class_id = int(cat_id) 
+                    # ⭐ [수정 완료] 유동적으로 늘어나던 이전 로직 제거
+                    # 압축 매핑 테이블을 사용하여 0, 1, 2... 순서의 안전한 class_id를 부여합니다.
+                    if cat_id in original_to_yolo_id:
+                        class_id = original_to_yolo_id[cat_id]
+                    else:
+                        continue
 
                     bbox = ann.get("bbox") 
                     if bbox and len(bbox) == 4:
@@ -176,7 +177,6 @@ def load_yolo_data_config(yaml_path: str) -> dict:
     yaml_file_path = Path(yaml_path)
     
     if not yaml_file_path.exists() or not (yaml_file_path.parent / "train/images").exists():
-        
         build_yolo_dataset(
             image_dir=ORIGINAL_IMAGES,
             label_dir=ORIGINAL_LABELS,
@@ -222,7 +222,7 @@ def validate_yolo_data_config(config: dict):
     if config["nc"] != len(config["names"]):
         raise ValueError("YAML 내 nc(클래스 수)와 names 배열의 크기가 일치하지 않습니다.")
 
-# 학습셋 중 이미지와 어노테이션 매칭이 잘 됐는지 시각적 검증 함수 제작 (필요시에만 실행)
+# 학습셋 중 이미지와 어노테이션 매칭이 잘 됐는지 시각적 검증 함수
 def verify_yolo_conversion(yaml_config: dict):
     root_path = Path(yaml_config["root"])
     train_img_dir = root_path / yaml_config["train_dir"]
@@ -259,7 +259,6 @@ def verify_yolo_conversion(yaml_config: dict):
     with open(sample_lbl_path, "r", encoding="utf-8") as f:
         lines = f.readlines()
 
-
     for line in lines:
         parts = line.strip().split()
         if len(parts) != 5:
@@ -279,7 +278,6 @@ def verify_yolo_conversion(yaml_config: dict):
         label_text = class_names[class_id] if class_id < len(class_names) else f"Class {class_id}"
         draw.text((x1 + 5, y1 - 32), label_text, fill="red", font=font)
 
-    # 시각화 이미지 저장
     output_path = root_path / "verification_sample.png"
     img.save(output_path)
     print(f" └─ 검증 시각화 완료: {output_path.resolve()}")

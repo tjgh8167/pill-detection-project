@@ -20,8 +20,8 @@ def main():
     WEIGHT_DECAY = 1e-4
 
     OPTIMIZER = "Adam"
-    IMAGE_SIZE = 320
-    CONF_THRESHOLD = 0.25
+    IMAGE_SIZE = 1280
+    CONF_THRESHOLD = 0.1
 
 
     DEVICE = "cuda" if torch.cuda.is_available() else ("mps" if torch.backends.mps.is_available() else "cpu")

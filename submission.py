@@ -1,12 +1,32 @@
 import csv
 import os, sys
+import json  # 👈 [추가] JSON 파싱용
 from pathlib import Path
 from ultralytics import YOLO
 
 # 1. 경로 설정
-BASE_MODEL_DIR = "./saved_models"                                         
-TEST_IMG_DIR = "./data/sprint_ai_project1_data/test_images"               
-SUBMISSION_CSV_PATH = "./final_submission.csv"                            
+BASE_MODEL_DIR = "/content/project_team4/saved_models"                                         
+TEST_IMG_DIR = "/content/project_team4/data/sprint_ai_project1_data/test_images"               
+SUBMISSION_CSV_PATH = "/content/project_team4/final_submission.csv"                            
+ORIGINAL_LABELS = "/content/project_team4/data/sprint_ai_project1_data/train_annotations" # 👈 [추가] 복원 테이블 생성용
+
+# ------------------------------------------------------------------
+# ⭐ [추가] data_loader.py와 100% 일치하는 오리지널 ID 정렬 리스트 생성
+# ------------------------------------------------------------------
+lbl_src_dir = Path(ORIGINAL_LABELS)
+json_files = list(lbl_src_dir.rglob("*.json")) + list(lbl_src_dir.rglob("*.JSON"))
+real_categories = set()
+for j_file in json_files:
+    try:
+        with open(j_file, "r", encoding="utf-8") as f:
+            data = json.load(f)
+            if "categories" in data:
+                for cat in data["categories"]:
+                    real_categories.add(int(cat["id"]))
+    except Exception:
+        continue
+sorted_original_ids = sorted(list(real_categories))
+# ------------------------------------------------------------------
 
 try:
     if not os.path.exists(BASE_MODEL_DIR):
@@ -43,16 +63,16 @@ with open(SUBMISSION_CSV_PATH, mode="w", newline="", encoding="utf-8") as f:
     annotation_counter = 1
     
     for result in results:
-        # 파일명이 '1.png', '3.png' 이므로 순수 정수형 숫자로 안전하게 파싱됩니다.
         image_id = int(Path(result.path).stem)
             
         boxes = result.boxes
         
         for box in boxes:
-            # ⭐ [중요 변경] 데이터 로더를 고쳤기 때문에 모델이 출력하는 cls 번호를 그대로 씁니다 (+1 안함)
-            category_id = int(box.cls[0].item())        
+            yolo_cls_id = int(box.cls[0].item())        
             
-            # ⭐ [중요 변경] 반올림 문자열 대신 순수 float 숫자형으로 소수점 정밀도를 보존합니다
+            # ⭐ [수정] 모델이 예측한 0, 1, 2... 를 대회의 진짜 ID(1, 24, 11...)로 복원합니다.
+            category_id = sorted_original_ids[yolo_cls_id] 
+            
             score = float(box.conf[0].item()) 
             
             # YOLO xyxy -> [좌상단_x, 좌상단_y, 우하단_x, 우하단_y]
