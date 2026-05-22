@@ -14,7 +14,8 @@ def train_model(
     experiment_name="train",
     seed=42,
     mosaic=1.0,
-    degrees=15.0
+    degrees=15.0,
+    device="cpu"
 ):
     """
     YOLOv11 모델 학습 함수

@@ -8,7 +8,8 @@ def evaluate_model(
     imgsz=640,
     batch_size=16,
     experiment_name="val",
-    augment=True
+    augment=True,
+    device = "cpu"
 ):
     """
     YOLOv11 모델 평가 함수
@@ -49,7 +50,8 @@ def evaluate_model(
         project=str(save_dir),
         name=experiment_name,
         exist_ok=True,
-        augment=augment
+        augment=augment,
+        device = device
     )
 
     print("검증 평가 완료")
@@ -73,7 +75,8 @@ def predict_and_visualize(
     experiment_name="predict",
     augment=True,
     save_crop=True,
-    save_txt=True
+    save_txt=True,
+    device = "cpu"
 ):
     """
     YOLOv11 예측 및 시각화 함수

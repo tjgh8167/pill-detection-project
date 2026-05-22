@@ -1,6 +1,9 @@
 import os
+import torch
 from datetime import datetime
 from pathlib import Path
+from ultralytics import YOLO
+import platform
 
 from src.data_loader import load_yolo_data_config, validate_yolo_data_config, verify_yolo_conversion
 from src.model import get_model
@@ -21,6 +24,9 @@ def main():
     CONF_THRESHOLD = 0.25
 
 
+    DEVICE = "cuda" if torch.cuda.is_available() else ("mps" if torch.backends.mps.is_available() else "cpu")
+    print(f"🌟 [현재 할당된 연산 장치]: YOLO device='{DEVICE}'")
+
     # 모델과 학습 결과를 저장할 디렉토리 생성(시간별 폴더 생성)
     BASE_DIR = Path(__file__).resolve().parent
     current_time = datetime.now().strftime("%Y%m%d_%H%M%S")
@@ -29,6 +35,8 @@ def main():
     
     print("[RUN] 프로젝트 파이프라인 가동")
 
+    
+    
     # 1. YOLOv11 데이터 구성 파일 로딩 (DE 파트)
     print("\n[STEP 1] YOLO 데이터 구성 파일 로딩")
 
@@ -44,54 +52,60 @@ def main():
 
     # 2. 모델 생성 (MA 파트)
     print("[STEP 2] 모델 생성")
-    '''
-    모델 함수 제작 후
-    model = get_model()
-    '''
+
+    model = get_model(model_size="m")
+
     # 3. 모델 학습 및 성능 평가 (EL 파트)
     # 에폭별 Loss곡선 그래프 이미지 / 모델 저장: saved_models 폴더
     print("[STEP 3] 모델 학습 및 성능 평가")
-    '''
+
     trained_model, loss_graph = train_model(
-        model=model,
-        train_loader=train_loader,
-        val_loader=val_loader,
-        epochs=EPOCHS,
-        batch_size=BATCH_SIZE,
-        imgsz=IMAGE_SIZE,
-        save_dir=SAVE_DIR,
-        lr=LEARNING_RATE,
-        weight_decay=WEIGHT_DECAY,
-        optimizer_name=OPTIMIZER,
-        save_dir=SAVE_DIR
-        experiment_name="train"
-    )
-    '''
+    model,
+    data_yaml=DATA_YAML,
+    epochs=EPOCHS,
+    batch_size=BATCH_SIZE,
+    imgsz=IMAGE_SIZE,
+    save_dir=SAVE_DIR,
+    lr=1e-4,
+    weight_decay=1e-4,
+    optimizer_name="Adam",
+    experiment_name="train",
+    seed=42,
+    mosaic=1.0,
+    degrees=15.0,
+    device="cpu"
+)
+
     print(" └─ 학습 및 Loss 그래프, 모델 저장이 완료되었습니다.")
 
     # 4. 학습 후 모델을 테스트 데이터셋으로 평가 (EL 파트)
     # 시각화 결과 저장 (아무것도 안그려진 원본 이미지 / 예측 바운딩 박스 결과 비교 이미지)
     print("[STEP 4] 테스트 평가 및 시각화 저장")
-    '''
-    metrics = evaluate_model(
-        model=trained_model,
-        data_yaml=DATA_YAML,
-        save_dir=SAVE_DIR,
-        imgsz=IMAGE_SIZE,
-        batch_size=BATCH_SIZE,
-        experiment_name="val"
-    )
+    
+    evaluate_model(
+    model = trained_model,
+    data_yaml=DATA_YAML,
+    save_dir=SAVE_DIR,
+    imgsz=640,
+    batch_size=16,
+    experiment_name="val",
+    augment=True,
+    device = "cpu"
+)
 
     predict_results = predict_and_visualize(
-        model=trained_model,
-        source=Path(data_config["root"]) / data_config["val_dir"],
-        save_dir=SAVE_DIR,
-        imgsz=IMAGE_SIZE,
-        conf=CONF_THRESHOLD,
-        experiment_name="predict"
+    model = trained_model,
+    source = Path(data_config["root"]) / data_config["val_dir"],
+    save_dir = SAVE_DIR,
+    imgsz = 640,
+    conf = 0.25,
+    experiment_name = "predict",
+    augment=True,
+    save_crop=True,
+    save_txt=True,
+    device = "cpu"
     )
 
-    '''
     print(" └─ 테스트 평가 및 시각화 저장이 완료되었습니다.")
 
     print("\n[DONE] 모든 프로세스가 성공적으로 종료되었습니다")

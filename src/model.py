@@ -13,4 +13,5 @@ def get_model(model_size="m"):
     - pretrained: yolo11{model_size}.pt
     """
     model = YOLO(f"yolo11{model_size}.pt")
+
     return model
