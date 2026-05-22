@@ -34,18 +34,26 @@ def build_yolo_dataset(image_dir: Path, label_dir: Path, output_root: Path):
     detected_classes = set()
     
     # 1. COCO 포맷의 'categories' 내부에서 실제 알약 이름 수집
+    categories_map = {}
     for j_file in json_files:
         try:
             with open(j_file, "r", encoding="utf-8") as f:
                 data = json.load(f)
                 if "categories" in data:
                     for cat in data["categories"]:
-                        if "name" in cat:
-                            detected_classes.add(cat["name"])
+                        categories_map[int(cat["id"])] = cat["name"]
         except Exception:
             continue
 
-    class_names = sorted(list(detected_classes))
+    if not categories_map:
+        print("[오류] JSON 파일에서 알약 카테고리 이름을 찾지 못했습니다.")
+        return
+
+    # 대회 ID 체계를 그대로 유지하기 위해 고정된 리스트 생성
+    # (YOLO는 0번부터 시작하므로 max_id + 1 크기로 만듭니다)
+    max_id = max(categories_map.keys())
+    class_names = [categories_map.get(i, f"unknown_{i}") for i in range(max_id + 1)]
+    
     if not class_names:
         print("[오류] JSON 파일에서 알약 카테고리 이름을 찾지 못했습니다.")
         return
@@ -104,12 +112,9 @@ def build_yolo_dataset(image_dir: Path, label_dir: Path, output_root: Path):
                 with open(json_path, "r", encoding="utf-8") as f:
                     ann_data = json.load(f)
 
+                # 개별 파일 안에서 다시 수집하던 로직 제거 (위에서 통틀어 맞췄으므로 필요 없음)
                 json_id_to_name = {cat["id"]: cat["name"] for cat in ann_data.get("categories", [])}
                 
-                for cat_name in json_id_to_name.values():
-                    if cat_name not in class_names:
-                        class_names.append(cat_name)
-
                 images_list = ann_data.get("images", [])
                 if isinstance(images_list, dict):
                     images_list = [images_list]
@@ -122,14 +127,9 @@ def build_yolo_dataset(image_dir: Path, label_dir: Path, output_root: Path):
                 annotations = ann_data.get("annotations", [])
                 for ann in annotations:
                     cat_id = ann.get("category_id")
-                    cat_name = json_id_to_name.get(cat_id)
                     
-                    if not cat_name:
-                        cat_name = f"Unknown_Cat_{cat_id}"
-                    if cat_name not in class_names:
-                        class_names.append(cat_name)
-                        
-                    class_id = class_names.index(cat_name)
+                    # 💡 핵심 수정: index() 함수를 쓰지 않고, JSON 고유 ID를 그대로 YOLO 클래스 ID로 씁니다.
+                    class_id = int(cat_id) 
 
                     bbox = ann.get("bbox") 
                     if bbox and len(bbox) == 4:
