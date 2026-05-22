@@ -28,7 +28,7 @@ def main():
     print(f"🌟 [현재 할당된 연산 장치]: YOLO device='{DEVICE}'")
 
     # 모델과 학습 결과를 저장할 디렉토리 생성(시간별 폴더 생성)
-    BASE_DIR = Path(__file__).resolve().parent
+    BASE_DIR = Path('/content/project_team4')
     current_time = datetime.now().strftime("%Y%m%d_%H%M%S")
     SAVE_DIR = BASE_DIR / "saved_models" / current_time
     os.makedirs(SAVE_DIR, exist_ok=True)
