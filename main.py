@@ -3,7 +3,6 @@ import torch
 from datetime import datetime
 from pathlib import Path
 from ultralytics import YOLO
-import platform
 
 from src.data_loader import load_yolo_data_config, validate_yolo_data_config, verify_yolo_conversion
 from src.model import get_model
@@ -22,6 +21,7 @@ def main():
     OPTIMIZER = "Adam"
     IMAGE_SIZE = 1280
     CONF_THRESHOLD = 0.1
+    MAX_DET = 4
 
 
     DEVICE = "cuda" if torch.cuda.is_available() else ("mps" if torch.backends.mps.is_available() else "cpu")
@@ -53,7 +53,7 @@ def main():
     # 2. 모델 생성 (MA 파트)
     print("[STEP 2] 모델 생성")
 
-    model = get_model(model_size="n")
+    model = get_model(model_size="m")
 
     # 3. 모델 학습 및 성능 평가 (EL 파트)
     # 에폭별 Loss곡선 그래프 이미지 / 모델 저장: saved_models 폴더
@@ -88,10 +88,10 @@ def main():
     model = trained_model[0],
     data_yaml=DATA_YAML,
     save_dir=SAVE_DIR,
-    imgsz=640,
+    imgsz=IMAGE_SIZE,
     batch_size=16,
     experiment_name="val",
-    augment=False,
+    augment=True,
     device = DEVICE
 )
 
@@ -99,10 +99,11 @@ def main():
     model = trained_model[0],
     source = TEST_IMG_DIR,
     save_dir = SAVE_DIR,
-    imgsz = 640,
+    imgsz = IMAGE_SIZE,
     conf = CONF_THRESHOLD,
+    max_det = MAX_DET,
     experiment_name = "predict",
-    augment=False,
+    augment=True,
     save_crop=True,
     save_txt=True,
     device = DEVICE
