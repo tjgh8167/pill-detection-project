@@ -58,7 +58,7 @@ source=TEST_IMG_DIR,
 imgsz=IMAGE_SIZE,
 conf=CONF_THRESHOLD,
 max_det=MAX_DET,
-augment=True,
+augment=None,
 save=False
 )
 

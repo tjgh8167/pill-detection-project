@@ -5,11 +5,12 @@ def evaluate_model(
     model,
     data_yaml,
     save_dir,
-    imgsz=640,
+    imgsz=1280,
     batch_size=16,
     experiment_name="val",
-    augment=True,
-    device = "cpu"
+    augment=None,
+    device = "cpu",
+    max_det = None
 ):
     """
     YOLOv11 모델 평가 함수
@@ -51,7 +52,8 @@ def evaluate_model(
         name=experiment_name,
         exist_ok=True,
         augment=augment,
-        device = device
+        device = device,
+        max_det = max_det
     )
 
     print("검증 평가 완료")
@@ -73,11 +75,11 @@ def predict_and_visualize(
     imgsz=640,
     conf=0.25,
     experiment_name="predict",
-    augment=True,
+    augment=None,
     save_crop=True,
     save_txt=True,
     device = "cpu",
-    max_det=None
+    max_det = None
 ):
     """
     YOLOv11 예측 및 시각화 함수
@@ -122,7 +124,8 @@ def predict_and_visualize(
         exist_ok=True,
         augment=augment,
         save_crop=save_crop,
-        save_txt=save_txt
+        save_txt=save_txt,
+        max_det=max_det,
     )
 
     print("예측 및 시각화 완료")

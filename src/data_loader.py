@@ -231,52 +231,53 @@ def verify_yolo_conversion(yaml_config: dict):
     if not img_files:
         print("검증할 이미지를 찾을 수 없습니다.")
         return
+    
     for i in range(5):
         sample_img_path = random.choice(img_files)
         sample_lbl_path = train_lbl_dir / f"{sample_img_path.stem}.txt"
         output_path = root_path / f"verification_sample{i}.png"
 
-    if not sample_lbl_path.exists():
-        print(f"{sample_img_path.name}에 매칭되는 라벨 파일이 없습니다.")
-        return
-
-    print(f"\n[검증 진행] 샘플 이미지 대상: {sample_img_path.name}")
-
-    img = PILImage.open(sample_img_path)
-    draw = ImageDraw.Draw(img)
-    img_w, img_h = img.size
-
-    try:
-        font_path = "/System/Library/Fonts/Supplemental/AppleGothic.ttf"
-        font = ImageFont.truetype(font_path, 24)
-    except IOError:
-        font = None
-
-    with open(sample_lbl_path, "r", encoding="utf-8") as f:
-        lines = f.readlines()
-
-    for line in lines:
-        parts = line.strip().split()
-        if len(parts) != 5:
+        if not sample_lbl_path.exists():
+            print(f"{sample_img_path.name}에 매칭되는 라벨 파일이 없습니다.")
             continue
+
+        print(f"\n[검증 진행] 샘플 이미지 대상: {sample_img_path.name}")
+
+        img = PILImage.open(sample_img_path)
+        draw = ImageDraw.Draw(img)
+        img_w, img_h = img.size
+
+        try:
+            font_path = "/System/Library/Fonts/Supplemental/AppleGothic.ttf"
+            font = ImageFont.truetype(font_path, 24)
+        except IOError:
+            font = None
+
+        with open(sample_lbl_path, "r", encoding="utf-8") as f:
+            lines = f.readlines()
+
+        for line in lines:
+            parts = line.strip().split()
+            if len(parts) != 5:
+                continue
             
-        class_id = int(parts[0])
-        x_center, y_center, norm_w, norm_h = map(float, parts[1:])
+            class_id = int(parts[0])
+            x_center, y_center, norm_w, norm_h = map(float, parts[1:])
 
-        w = norm_w * img_w
-        h = norm_h * img_h
-        x1 = int((x_center * img_w) - (w / 2))
-        y1 = int((y_center * img_h) - (h / 2))
-        x2 = int(x1 + w)
-        y2 = int(y1 + h)
+            w = norm_w * img_w
+            h = norm_h * img_h
+            x1 = int((x_center * img_w) - (w / 2))
+            y1 = int((y_center * img_h) - (h / 2))
+            x2 = int(x1 + w)
+            y2 = int(y1 + h)
 
-        draw.rectangle([x1, y1, x2, y2], outline="red", width=5)
-        label_text = class_names[class_id] if class_id < len(class_names) else f"Class {class_id}"
-        draw.text((x1 + 5, y1 - 32), label_text, fill="red", font=font)
+            draw.rectangle([x1, y1, x2, y2], outline="red", width=5)
+            label_text = class_names[class_id] if class_id < len(class_names) else f"Class {class_id}"
+            draw.text((x1 + 5, y1 - 32), label_text, fill="red", font=font)
 
-    output_path = root_path / "verification_sample.png"
-    img.save(output_path)
-    print(f" └─ 검증 시각화 완료: {output_path.resolve()}")
+        output_path = root_path / f"verification_sample{i}.png"
+        img.save(output_path)
+        print(f" └─ 검증 시각화 완료: {output_path.resolve()}")
 
 
 if __name__ == "__main__":
@@ -285,7 +286,7 @@ if __name__ == "__main__":
         label_dir=ORIGINAL_LABELS,
         output_root=OUTPUT_PROJECT_ROOT
     )
-    
+
     yaml_config = load_yolo_data_config(OUTPUT_PROJECT_ROOT / "data.yaml")
     
     verify_yolo_conversion(yaml_config)
