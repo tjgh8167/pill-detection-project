@@ -1,5 +1,7 @@
 import os
 
+#최적 파라미터 찾으면 수정 예정입니다(비교용 시각화 자료 추가 등)
+
 
 def evaluate_model(
     model,
@@ -108,6 +110,8 @@ def predict_and_visualize(
     print(f"Source: {source}")
     print(f"Image Size: {imgsz}")
     print(f"Confidence Threshold: {conf}")
+    print(f"Max Det: {max_det}")
+    print(f"Device: {device}")
     print(f"Augment: {augment}")
     print(f"Save Crop: {save_crop}")
     print(f"Save TXT: {save_txt}")
@@ -126,6 +130,7 @@ def predict_and_visualize(
         save_crop=save_crop,
         save_txt=save_txt,
         max_det=max_det,
+        device=device
     )
 
     print("예측 및 시각화 완료")
