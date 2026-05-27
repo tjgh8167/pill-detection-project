@@ -14,8 +14,8 @@ def main():
     # 하이퍼파라미터 및 설정값 정의
     BATCH_SIZE = 16
 
-    EPOCHS = 100
-    LEARNING_RATE = 1e-4
+    EPOCHS = 150
+    LEARNING_RATE = 3e-4
     WEIGHT_DECAY = 1e-4
 
     OPTIMIZER = "AdamW"
@@ -23,6 +23,10 @@ def main():
     CONF_THRESHOLD = 0.15
     MAX_DET = 4
     AUGMENT = True
+    MODEL_SIZE = "m"
+
+    MOSAIC = 1.0
+    DEGREES = 15.0
 
 
     DEVICE = "cuda" if torch.cuda.is_available() else ("mps" if torch.backends.mps.is_available() else "cpu")
@@ -54,7 +58,7 @@ def main():
     # 2. 모델 생성 (MA 파트)
     print("[STEP 2] 모델 생성")
 
-    model = get_model(model_size="m")
+    model = get_model(model_size=MODEL_SIZE)
 
     # 3. 모델 학습 및 성능 평가 (EL 파트)
     # 에폭별 Loss곡선 그래프 이미지 / 모델 저장: saved_models 폴더
@@ -72,8 +76,8 @@ def main():
     optimizer_name=OPTIMIZER,
     experiment_name="train",
     seed=42,
-    mosaic=1.0,
-    degrees=15.0,
+    mosaic=MOSAIC,
+    degrees=DEGREES,
     device=DEVICE
 )
 
@@ -90,10 +94,10 @@ def main():
     data_yaml=DATA_YAML,
     save_dir=SAVE_DIR,
     imgsz=IMAGE_SIZE,
-    batch_size=16,
+    batch_size=BATCH_SIZE,
     experiment_name="val",
     augment=AUGMENT,
-    device = DEVICE
+    device=DEVICE
 )
 
     predict_results = predict_and_visualize(
