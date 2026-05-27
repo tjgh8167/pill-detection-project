@@ -30,14 +30,13 @@ def build_yolo_dataset(image_dir: Path, label_dir: Path, output_root: Path):
 
     json_files = list(lbl_src_dir.rglob("*.json")) + list(lbl_src_dir.rglob("*.JSON"))
     
-    # ---------------------------------------------------------------- #
-    # ⭐ [수정 완료] 진짜 존재하는 카테고리 정보만 딕셔너리로 완벽하게 수집
-    # ---------------------------------------------------------------- #
+
     real_categories = {}  # {대회_original_id: "알약이름"}
     for j_file in json_files:
         try:
             with open(j_file, "r", encoding="utf-8") as f:
                 data = json.load(f)
+
                 if "categories" in data:
                     for cat in data["categories"]:
                         real_categories[int(cat["id"])] = cat["name"]
@@ -54,8 +53,7 @@ def build_yolo_dataset(image_dir: Path, label_dir: Path, output_root: Path):
     # data.yaml에 깔끔하게 들어갈 실제 알약 이름 목록 (예: 56개, 80개 등 실제 개수만큼만 생성)
     class_names = [real_categories[orig_id] for orig_id in sorted_original_ids]
     
-    # 거대한 원본 ID를 YOLO 학습용 0번 기반 인덱스로 압축 매핑하는 테이블
-    # 예: {41769: 0, 41800: 1, ...}
+    # 원본 ID를 YOLO 학습용 0번 기반 인덱스로 압축 매핑하는 테이블
     original_to_yolo_id = {orig_id: idx for idx, orig_id in enumerate(sorted_original_ids)}
 
     print(f"\n[안내] 발견된 실제 클래스 개수: {len(class_names)}개")
@@ -90,12 +88,10 @@ def build_yolo_dataset(image_dir: Path, label_dir: Path, output_root: Path):
             json_groups[normalized_name].append(j)
 
         for img_path in image_list:
-            norm_img_stem = img_path.stem.lower().replace("-", "").replace("_", "").replace(" ", "")
             
-            matched_jsons = []
-            for norm_json_key, j_list in json_groups.items():
-                if norm_img_stem in norm_json_key or norm_json_key in norm_img_stem:
-                    matched_jsons.extend(j_list)
+            # 이미지 파일명과 정확히 똑같은 이름을 가진 JSON 파일만 리스트에서 찾아냅니다.
+            # 예: img_path.stem이 '..._70_000_200' 이면 JSON도 '..._70_000_200.json' 인 것만 수집
+            matched_jsons = [j for j in json_files if j.stem == img_path.stem]
             
             if not matched_jsons:
                 continue
@@ -125,7 +121,6 @@ def build_yolo_dataset(image_dir: Path, label_dir: Path, output_root: Path):
                 for ann in annotations:
                     cat_id = int(ann.get("category_id"))
                     
-                    # ⭐ [수정 완료] 유동적으로 늘어나던 이전 로직 제거
                     # 압축 매핑 테이블을 사용하여 0, 1, 2... 순서의 안전한 class_id를 부여합니다.
                     if cat_id in original_to_yolo_id:
                         class_id = original_to_yolo_id[cat_id]
@@ -236,51 +231,53 @@ def verify_yolo_conversion(yaml_config: dict):
     if not img_files:
         print("검증할 이미지를 찾을 수 없습니다.")
         return
+    
+    for i in range(5):
+        sample_img_path = random.choice(img_files)
+        sample_lbl_path = train_lbl_dir / f"{sample_img_path.stem}.txt"
+        output_path = root_path / f"verification_sample{i}.png"
 
-    sample_img_path = random.choice(img_files)
-    sample_lbl_path = train_lbl_dir / f"{sample_img_path.stem}.txt"
-
-    if not sample_lbl_path.exists():
-        print(f"{sample_img_path.name}에 매칭되는 라벨 파일이 없습니다.")
-        return
-
-    print(f"\n[검증 진행] 샘플 이미지 대상: {sample_img_path.name}")
-
-    img = PILImage.open(sample_img_path)
-    draw = ImageDraw.Draw(img)
-    img_w, img_h = img.size
-
-    try:
-        font_path = "/System/Library/Fonts/Supplemental/AppleGothic.ttf"
-        font = ImageFont.truetype(font_path, 24)
-    except IOError:
-        font = None
-
-    with open(sample_lbl_path, "r", encoding="utf-8") as f:
-        lines = f.readlines()
-
-    for line in lines:
-        parts = line.strip().split()
-        if len(parts) != 5:
+        if not sample_lbl_path.exists():
+            print(f"{sample_img_path.name}에 매칭되는 라벨 파일이 없습니다.")
             continue
+
+        print(f"\n[검증 진행] 샘플 이미지 대상: {sample_img_path.name}")
+
+        img = PILImage.open(sample_img_path)
+        draw = ImageDraw.Draw(img)
+        img_w, img_h = img.size
+
+        try:
+            font_path = "/System/Library/Fonts/Supplemental/AppleGothic.ttf"
+            font = ImageFont.truetype(font_path, 24)
+        except IOError:
+            font = None
+
+        with open(sample_lbl_path, "r", encoding="utf-8") as f:
+            lines = f.readlines()
+
+        for line in lines:
+            parts = line.strip().split()
+            if len(parts) != 5:
+                continue
             
-        class_id = int(parts[0])
-        x_center, y_center, norm_w, norm_h = map(float, parts[1:])
+            class_id = int(parts[0])
+            x_center, y_center, norm_w, norm_h = map(float, parts[1:])
 
-        w = norm_w * img_w
-        h = norm_h * img_h
-        x1 = int((x_center * img_w) - (w / 2))
-        y1 = int((y_center * img_h) - (h / 2))
-        x2 = int(x1 + w)
-        y2 = int(y1 + h)
+            w = norm_w * img_w
+            h = norm_h * img_h
+            x1 = int((x_center * img_w) - (w / 2))
+            y1 = int((y_center * img_h) - (h / 2))
+            x2 = int(x1 + w)
+            y2 = int(y1 + h)
 
-        draw.rectangle([x1, y1, x2, y2], outline="red", width=5)
-        label_text = class_names[class_id] if class_id < len(class_names) else f"Class {class_id}"
-        draw.text((x1 + 5, y1 - 32), label_text, fill="red", font=font)
+            draw.rectangle([x1, y1, x2, y2], outline="red", width=5)
+            label_text = class_names[class_id] if class_id < len(class_names) else f"Class {class_id}"
+            draw.text((x1 + 5, y1 - 32), label_text, fill="red", font=font)
 
-    output_path = root_path / "verification_sample.png"
-    img.save(output_path)
-    print(f" └─ 검증 시각화 완료: {output_path.resolve()}")
+        output_path = root_path / f"verification_sample{i}.png"
+        img.save(output_path)
+        print(f" └─ 검증 시각화 완료: {output_path.resolve()}")
 
 
 if __name__ == "__main__":
@@ -289,3 +286,7 @@ if __name__ == "__main__":
         label_dir=ORIGINAL_LABELS,
         output_root=OUTPUT_PROJECT_ROOT
     )
+
+    yaml_config = load_yolo_data_config(OUTPUT_PROJECT_ROOT / "data.yaml")
+    
+    verify_yolo_conversion(yaml_config)

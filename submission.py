@@ -1,18 +1,19 @@
 import csv
 import os, sys
-import json  # 👈 [추가] JSON 파싱용
+import json
 from pathlib import Path
 from ultralytics import YOLO
 
-# 1. 경로 설정
+# 1. 경로 설정, 파라미터 설정
 BASE_MODEL_DIR = "/content/project_team4/saved_models"                                         
-TEST_IMG_DIR = "/content/project_team4/data/sprint_ai_project1_data/test_images"               
-SUBMISSION_CSV_PATH = "/content/project_team4/final_submission.csv"                            
-ORIGINAL_LABELS = "/content/project_team4/data/sprint_ai_project1_data/train_annotations" # 👈 [추가] 복원 테이블 생성용
+TEST_IMG_DIR = "/content/project_team4/data/sprint_ai_project1_data/test_images"                                         
+ORIGINAL_LABELS = "/content/project_team4/data/sprint_ai_project1_data/train_annotations"
 
-# ------------------------------------------------------------------
-# ⭐ [추가] data_loader.py와 100% 일치하는 오리지널 ID 정렬 리스트 생성
-# ------------------------------------------------------------------
+IMAGE_SIZE = 1280
+CONF_THRESHOLD = 0.15
+MAX_DET = 4
+
+
 lbl_src_dir = Path(ORIGINAL_LABELS)
 json_files = list(lbl_src_dir.rglob("*.json")) + list(lbl_src_dir.rglob("*.JSON"))
 real_categories = set()
@@ -26,7 +27,6 @@ for j_file in json_files:
     except Exception:
         continue
 sorted_original_ids = sorted(list(real_categories))
-# ------------------------------------------------------------------
 
 try:
     if not os.path.exists(BASE_MODEL_DIR):
@@ -45,13 +45,22 @@ try:
 
     print(f"가장 최신의 폴더 {MODEL_PATH}에서 가중치를 로드합니다.")
 
+    SUBMISSION_CSV_PATH = os.path.join(latest_dir, "final_submission.csv")
+
 except Exception as e:
     print(f"오류 발생: {e}")
     sys.exit(1)
 
 # 2. YOLO 모델 로드 및 추론
 model = YOLO(MODEL_PATH)
-results = model.predict(source=TEST_IMG_DIR, conf=0.25, save=False)
+results = model.predict(
+source=TEST_IMG_DIR,
+imgsz=IMAGE_SIZE,
+conf=CONF_THRESHOLD,
+max_det=MAX_DET,
+augment=None,
+save=False
+)
 
 # 3. CSV 파일 작성
 with open(SUBMISSION_CSV_PATH, mode="w", newline="", encoding="utf-8") as f:
