@@ -1,13 +1,12 @@
 import csv
 import os, sys
-import json  # 👈 [추가] JSON 파싱용
+import json
 from pathlib import Path
 from ultralytics import YOLO
 
 # 1. 경로 설정, 파라미터 설정
-BASE_MODEL_DIR = "content/saved_models"                                         
-TEST_IMG_DIR = "/content/project_team4/data/sprint_ai_project1_data/test_images"               
-SUBMISSION_CSV_PATH = "/content/project_team4/submission.csv"                            
+BASE_MODEL_DIR = "/content/project_team4/saved_models"                                         
+TEST_IMG_DIR = "/content/project_team4/data/sprint_ai_project1_data/test_images"                                         
 ORIGINAL_LABELS = "/content/project_team4/data/sprint_ai_project1_data/train_annotations"
 
 IMAGE_SIZE = 1280
@@ -45,6 +44,8 @@ try:
         raise FileNotFoundError(f"최신 모델 폴더는 찾았으나, 가중치 파일({MODEL_PATH})이 존재하지 않습니다.")
 
     print(f"가장 최신의 폴더 {MODEL_PATH}에서 가중치를 로드합니다.")
+
+    SUBMISSION_CSV_PATH = os.path.join(latest_dir, "final_submission.csv")
 
 except Exception as e:
     print(f"오류 발생: {e}")
