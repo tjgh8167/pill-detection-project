@@ -231,9 +231,10 @@ def verify_yolo_conversion(yaml_config: dict):
     if not img_files:
         print("검증할 이미지를 찾을 수 없습니다.")
         return
-
-    sample_img_path = random.choice(img_files)
-    sample_lbl_path = train_lbl_dir / f"{sample_img_path.stem}.txt"
+    for i in range(5):
+        sample_img_path = random.choice(img_files)
+        sample_lbl_path = train_lbl_dir / f"{sample_img_path.stem}.txt"
+        output_path = root_path / f"verification_sample{i}.png"
 
     if not sample_lbl_path.exists():
         print(f"{sample_img_path.name}에 매칭되는 라벨 파일이 없습니다.")
@@ -284,3 +285,7 @@ if __name__ == "__main__":
         label_dir=ORIGINAL_LABELS,
         output_root=OUTPUT_PROJECT_ROOT
     )
+    
+    yaml_config = load_yolo_data_config(OUTPUT_PROJECT_ROOT / "data.yaml")
+    
+    verify_yolo_conversion(yaml_config)
