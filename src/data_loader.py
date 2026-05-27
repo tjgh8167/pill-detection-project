@@ -30,14 +30,13 @@ def build_yolo_dataset(image_dir: Path, label_dir: Path, output_root: Path):
 
     json_files = list(lbl_src_dir.rglob("*.json")) + list(lbl_src_dir.rglob("*.JSON"))
     
-    # ---------------------------------------------------------------- #
-    # ⭐ [수정 완료] 진짜 존재하는 카테고리 정보만 딕셔너리로 완벽하게 수집
-    # ---------------------------------------------------------------- #
+
     real_categories = {}  # {대회_original_id: "알약이름"}
     for j_file in json_files:
         try:
             with open(j_file, "r", encoding="utf-8") as f:
                 data = json.load(f)
+
                 if "categories" in data:
                     for cat in data["categories"]:
                         real_categories[int(cat["id"])] = cat["name"]
@@ -54,8 +53,7 @@ def build_yolo_dataset(image_dir: Path, label_dir: Path, output_root: Path):
     # data.yaml에 깔끔하게 들어갈 실제 알약 이름 목록 (예: 56개, 80개 등 실제 개수만큼만 생성)
     class_names = [real_categories[orig_id] for orig_id in sorted_original_ids]
     
-    # 거대한 원본 ID를 YOLO 학습용 0번 기반 인덱스로 압축 매핑하는 테이블
-    # 예: {41769: 0, 41800: 1, ...}
+    # 원본 ID를 YOLO 학습용 0번 기반 인덱스로 압축 매핑하는 테이블
     original_to_yolo_id = {orig_id: idx for idx, orig_id in enumerate(sorted_original_ids)}
 
     print(f"\n[안내] 발견된 실제 클래스 개수: {len(class_names)}개")
@@ -90,12 +88,10 @@ def build_yolo_dataset(image_dir: Path, label_dir: Path, output_root: Path):
             json_groups[normalized_name].append(j)
 
         for img_path in image_list:
-            norm_img_stem = img_path.stem.lower().replace("-", "").replace("_", "").replace(" ", "")
             
-            matched_jsons = []
-            for norm_json_key, j_list in json_groups.items():
-                if norm_img_stem in norm_json_key or norm_json_key in norm_img_stem:
-                    matched_jsons.extend(j_list)
+            # 이미지 파일명과 정확히 똑같은 이름을 가진 JSON 파일만 리스트에서 찾아냅니다.
+            # 예: img_path.stem이 '..._70_000_200' 이면 JSON도 '..._70_000_200.json' 인 것만 수집
+            matched_jsons = [j for j in json_files if j.stem == img_path.stem]
             
             if not matched_jsons:
                 continue
@@ -125,7 +121,6 @@ def build_yolo_dataset(image_dir: Path, label_dir: Path, output_root: Path):
                 for ann in annotations:
                     cat_id = int(ann.get("category_id"))
                     
-                    # ⭐ [수정 완료] 유동적으로 늘어나던 이전 로직 제거
                     # 압축 매핑 테이블을 사용하여 0, 1, 2... 순서의 안전한 class_id를 부여합니다.
                     if cat_id in original_to_yolo_id:
                         class_id = original_to_yolo_id[cat_id]
