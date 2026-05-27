@@ -76,7 +76,8 @@ def predict_and_visualize(
     augment=True,
     save_crop=True,
     save_txt=True,
-    device = "cpu"
+    device = "cpu",
+    max_det=None
 ):
     """
     YOLOv11 예측 및 시각화 함수
