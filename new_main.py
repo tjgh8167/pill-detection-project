@@ -2,9 +2,6 @@ import os
 import torch
 from datetime import datetime
 from pathlib import Path
-
-# src 폴더 내부 또는 루트에 있는 new_dataloader에서 data_load 함수를 가져옵니다.
-# 파일 위치가 src/new_dataloader.py 라면 src.new_dataloader 로 변경해주세요.
 from src.new_dataloader import data_load 
 
 from src.model import get_model
@@ -13,9 +10,6 @@ from src.evaluate import evaluate_model, predict_and_visualize
 
 def main():
 
-    # =========================================================================
-    # [설정값 정의] 하이퍼파라미터 및 경로 세팅 (서호님의 핵심 파라미터 유지)
-    # =========================================================================
     BATCH_SIZE = 16
     EPOCHS = 150
     LEARNING_RATE = 3e-4
@@ -51,19 +45,16 @@ def main():
     SAVE_DIR = BASE_DIR / "saved_models" / current_time
     os.makedirs(SAVE_DIR, exist_ok=True)
     
-    print("[RUN] 프로젝트 고도화 파이프라인 가동")
+    print("[RUN] 프로젝트 파이프라인 가동")
 
-    # =========================================================================
-    # [STEP 1] 강력한 신규 데이터 로더 구동 (정제, 분할, 소수 클래스 타겟 증강 통합)
-    # =========================================================================
+    # [STEP 1] 데이터 로더 구동
     print("\n[STEP 1] 신규 파이프라인 데이터 전처리 및 타겟 증강 시작")
     
-    # 원천 데이터 경로가 실제로 존재하는지 방어적 체크
+
     if not RAW_DATA_DIR.exists():
-        print(f"❌ [오류] 원천 데이터 경로를 찾을 수 없습니다: {RAW_DATA_DIR}")
+        print(f"❌ [오류] 데이터 경로를 찾을 수 없습니다: {RAW_DATA_DIR}")
         return
 
-    # 서호님이 설계하신 완벽한 데이터 로더 작동
     class_names, class_map, updated_output_dir = data_load(
         base_path=str(RAW_DATA_DIR),
         output_path=str(OUTPUT_DATA_DIR),
@@ -74,15 +65,11 @@ def main():
     print(f" └─ 생성된 고유 클래스 수: {len(class_names)}개")
     print(f" └─ 생성된 가동 가이드라인 파일: {DATA_YAML.resolve()}")
 
-    # =========================================================================
     # [STEP 2] 모델 생성 (MA 파트)
-    # =========================================================================
     print("\n[STEP 2] YOLO 모델 생성 및 가중치 빌드")
     model = get_model(model_size=MODEL_SIZE)
 
-    # =========================================================================
     # [STEP 3] 모델 학습 및 성능 평가 (EL 파트)
-    # =========================================================================
     print("\n[STEP 3] 고정밀 모델 학습 및 내부 검증 프로세스")
     
     trained_model = train_model(
@@ -104,9 +91,7 @@ def main():
 
     print(" └─ 최적화 학습 완료 및 손실 함수(Loss) 추이 저장 완료.")
 
-    # =========================================================================
     # [STEP 4] 테스트 데이터셋 평가 및 추론 시각화 (EL 파트)
-    # =========================================================================
     print("\n[STEP 4] 리더보드용 테스트 평가 및 예측 결과 추출")
 
     TEST_IMG_DIR = RAW_DATA_DIR / "test_images"

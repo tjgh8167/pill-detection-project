@@ -89,10 +89,16 @@ def build_yolo_dataset(image_dir: Path, label_dir: Path, output_root: Path):
 
         for img_path in image_list:
             
-            # 이미지 파일명과 정확히 똑같은 이름을 가진 JSON 파일만 리스트에서 찾아냅니다.
-            # 예: img_path.stem이 '..._70_000_200' 이면 JSON도 '..._70_000_200.json' 인 것만 수집
-            matched_jsons = [j for j in json_files if j.stem == img_path.stem]
+            # 1. 이미지 파일명도 특수문자(_ , -)와 공백을 지우고 소문자로 통일합니다.
+            norm_img_stem = img_path.stem.lower().replace("-", "").replace("_", "").replace(" ", "")
             
+            # 2. 상단에서 만들어둔 json_groups 장부에서 이름이 매칭되는 JSON 파일들을 '전부' 긁어모읍니다.
+            matched_jsons = []
+            for norm_json_key, j_list in json_groups.items():
+                if norm_img_stem in norm_json_key or norm_json_key in norm_img_stem:
+                    matched_jsons.extend(j_list)
+            
+            # 3. 찢어진 폴더들 사이에서 매칭된 JSON이 하나도 없다면 건너뜁니다.
             if not matched_jsons:
                 continue
 
