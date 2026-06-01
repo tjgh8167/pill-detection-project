@@ -21,10 +21,10 @@ def main():
     AUGMENT = True          # 추론(TTA) 증강 여부
     MODEL_SIZE = "m"        # YOLOv11 미디움 체급
 
-    MOSAIC = 1.0
-    DEGREES = 15.0
+    MOSAIC = 0.0
+    DEGREES = 0.0
 
-    # 데이터 보강용 타겟 수치 정의 (소수 클래스는 최소 15개 이상 확보하도록 증강)
+    # 데이터 보강 수
     TARGET_COUNT = 15 
 
     DEVICE = "cuda" if torch.cuda.is_available() else ("mps" if torch.backends.mps.is_available() else "cpu")
@@ -52,7 +52,7 @@ def main():
     
 
     if not RAW_DATA_DIR.exists():
-        print(f"❌ [오류] 데이터 경로를 찾을 수 없습니다: {RAW_DATA_DIR}")
+        print(f"[오류] 데이터 경로를 찾을 수 없습니다: {RAW_DATA_DIR}")
         return
 
     class_names, class_map, updated_output_dir = data_load(

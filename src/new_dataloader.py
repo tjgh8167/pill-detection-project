@@ -12,16 +12,15 @@ from sklearn.model_selection import train_test_split
 
 def data_load(base_path='/content/project_team4/data/sprint_ai_project1_data',
               output_path='/content/project_team4/data',
-              target_count=15):
+              target_count=None):
 
     BASE_DIR = Path(base_path)
     RAW_IMAGE_DIR = BASE_DIR / 'train_images'
     RAW_LABEL_DIR = BASE_DIR / 'train_annotations'
     OUTPUT_DIR = Path(output_path)
-
-    # ==========================================
+    
     # 1. 클래스 정보 추출
-    # ==========================================
+
     json_files = list(RAW_LABEL_DIR.rglob('*.json')) + list(RAW_LABEL_DIR.rglob('*.JSON'))
     unique_categories = {}
 
@@ -42,9 +41,8 @@ def data_load(base_path='/content/project_team4/data/sprint_ai_project1_data',
 
     print(f"발견된 고유 클래스 수: {len(class_names)}")
 
-    # ==========================================
     # 2. 데이터 무결성 검사
-    # ==========================================
+
     img_files = list(RAW_IMAGE_DIR.glob('*.jpg')) + list(RAW_IMAGE_DIR.glob('*.png'))
     missing_stats = Counter()
     inconsistent_files = []
@@ -74,9 +72,7 @@ def data_load(base_path='/content/project_team4/data/sprint_ai_project1_data',
     final_clean_images = [p for p in img_files if p.stem not in inconsistent_files]
     print(f"불일치 발견: {len(inconsistent_files)}장 / 최종 정제 완료: {len(final_clean_images)}장 확보")
 
-    # ==========================================
     # 3. 데이터셋 분할 및 YOLO 변환
-    # ==========================================
     print(f"\n--- 3. 데이터셋 분할 및 YOLO 변환 ---")
     train_list, val_list = train_test_split(final_clean_images, test_size=0.2, random_state=42)
     print(f"분할 완료: 학습용 {len(train_list)}장, 검증용 {len(val_list)}장")
@@ -124,13 +120,16 @@ def data_load(base_path='/content/project_team4/data/sprint_ai_project1_data',
     with open(OUTPUT_DIR / 'data.yaml', 'w', encoding='utf-8') as f:
         yaml.dump(data_yaml, f, allow_unicode=True)
 
-    # ==========================================
-    # 4. 데이터 증강 (Train) - 안전장치(utf-8) 보완
-    # ==========================================
+    # 4. 데이터 증강 (Train)
+
     print(f"\n--- 4. 데이터 증강 모드 ---")
     aug_pipeline = A.Compose([
-        A.HorizontalFlip(p=0.5), A.VerticalFlip(p=0.5), A.RandomRotate90(p=0.5),
-        A.RandomBrightnessContrast(p=0.2), A.GaussianBlur(p=0.1)
+        A.HorizontalFlip(0.5), 
+        A.VerticalFlip(0.5), 
+        A.RandomRotate90(0.5),
+        A.RandomBrightnessContrast(0.2), 
+        A.GaussianBlur(0.1),
+        A.HueSaturationValue(10, 15, 10, 0.1)
     ], bbox_params=A.BboxParams(format='yolo', label_fields=['class_labels']))
 
     train_img_dir, train_lbl_dir = OUTPUT_DIR / 'train' / 'images', OUTPUT_DIR / 'train' / 'labels'
