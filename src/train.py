@@ -8,15 +8,16 @@ def train_model(
     batch_size,
     imgsz,
     save_dir,
-    lr=1e-4,
-    weight_decay=1e-4,
-    optimizer_name="Adam",
+    lr,
+    weight_decay,
+    optimizer_name,
+    mosaic,
+    degrees,
     experiment_name="train",
     seed=42,
-    mosaic=1.0,
-    degrees=15.0,
     device="cpu"
 ):
+    
     """
     YOLOv11 모델 학습 함수
 
@@ -60,6 +61,7 @@ def train_model(
     print(f"Seed: {seed}")
     print(f"Mosaic: {mosaic}")
     print(f"Degrees: {degrees}")
+    print(f"Device: {device}")
 
     print("==================================")
 
@@ -76,7 +78,8 @@ def train_model(
         exist_ok=True, 
         seed=seed,
         mosaic=mosaic,
-        degrees=degrees
+        degrees=degrees,
+        device=device
     )
 
     print("학습 완료")
