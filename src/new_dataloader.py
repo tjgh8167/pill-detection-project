@@ -18,7 +18,7 @@ def data_load(base_path='/content/project_team4/data/sprint_ai_project1_data',
     RAW_IMAGE_DIR = BASE_DIR / 'train_images'
     RAW_LABEL_DIR = BASE_DIR / 'train_annotations'
     OUTPUT_DIR = Path(output_path)
-    
+
     # 1. 클래스 정보 추출
 
     json_files = list(RAW_LABEL_DIR.rglob('*.json')) + list(RAW_LABEL_DIR.rglob('*.JSON'))
@@ -39,43 +39,72 @@ def data_load(base_path='/content/project_team4/data/sprint_ai_project1_data',
     class_map = {orig_id: idx for idx, orig_id in enumerate(sorted_ids)}
     class_names = [unique_categories[orig_id] for orig_id in sorted_ids]
 
-    print(f"발견된 고유 클래스 수: {len(class_names)}")
+    print(f"- 발견된 고유 클래스 수: {len(class_names)}")
 
     # 2. 데이터 무결성 검사
 
-    img_files = list(RAW_IMAGE_DIR.glob('*.jpg')) + list(RAW_IMAGE_DIR.glob('*.png'))
-    missing_stats = Counter()
-    inconsistent_files = []
+    raw_img_files = list(RAW_IMAGE_DIR.glob('*.jpg')) + list(RAW_IMAGE_DIR.glob('*.png')) + \
+                    list(RAW_IMAGE_DIR.glob('*.JPG')) + list(RAW_IMAGE_DIR.glob('*.PNG'))
+    img_files = list(set(raw_img_files)) # 유니크한 원본 이미지 파일 객체 리스트
 
-    print(f"\n--- 2. 데이터 무결성 검사 시작 ({len(img_files)}개 이미지) ---")
+    missing_stats = Counter()
+    mismatch_files = [] # 진짜 어노테이션 파일이 실종된 이미지 객체 저장
+
+    print(f"\n--- 2. 데이터 누락 검사 (총 {len(img_files)}개 원본 이미지) ---")
+
     for img_path in img_files:
         stem = img_path.stem
-        expected_ids = [int(id_str) for id_str in re.findall(r'K-(\d{6})', stem)]
-        if not expected_ids: continue
 
-        matched_jsons = list(RAW_LABEL_DIR.rglob(f"{stem}*.json"))
-        actual_ids = set()
-        for j_file in matched_jsons:
-            try:
-                with open(j_file, 'r', encoding='utf-8') as f:
-                    for ann in json.load(f).get('annotations', []):
-                        actual_ids.add(ann['category_id'])
-            except: continue
+        # 1. 이미지명에서 6자리 알약 고유 ID 세트 추출 (예: {3351, 32310, 38162})
+        expected_ids = set([int(id_str) for id_str in re.findall(r'\d{6}', stem)])
+        if not expected_ids:
+            continue
 
-        missing_in_this_file = [eid for eid in expected_ids if eid not in actual_ids]
-        if missing_in_this_file:
-            for mid in missing_in_this_file:
-                pill_name = class_names[class_map[mid]] if mid in class_map else f"Unknown({mid})"
-                missing_stats[pill_name] += 1
-            inconsistent_files.append(stem)
+        # 현재 타겟 이미지의 각도 추출 (_70_, _75_, _90_ 등)
+        angle_match = re.search(r'_(\d{2})_\d{3}_\d{3}', stem)
+        current_angle = angle_match.group(1) if angle_match else None
 
-    final_clean_images = [p for p in img_files if p.stem not in inconsistent_files]
-    print(f"불일치 발견: {len(inconsistent_files)}장 / 최종 정제 완료: {len(final_clean_images)}장 확보")
+        has_real_file_missing = False
+
+        # 2. 알약별 고유 폴더를 각각 뒤집니다.
+        for p_id in expected_ids:
+            pill_folder_pattern = f"*K-{p_id:06d}*"
+            pill_folders = list(RAW_LABEL_DIR.glob(pill_folder_pattern)) + list(RAW_LABEL_DIR.rglob(pill_folder_pattern))
+            pill_folders = list(set(pill_folders)) # 중복 경로 제거
+
+            # 해당 알약 폴더 내부의 모든 json 파일 스캔
+            all_jsons_in_folder = []
+            for folder in pill_folders:
+                all_jsons_in_folder.extend(list(folder.glob("*.json")) + list(folder.glob("*.JSON")))
+
+            # 파일명 내에 조합원(알약 고유 ID들)이 다 포함되어 있는지 검사
+            matched_combination_jsons = []
+            for j_file in all_jsons_in_folder:
+                j_stem = j_file.stem
+                j_ids = set([int(id_str) for id_str in re.findall(r'\d{6}', j_stem)])
+
+                if expected_ids == j_ids:
+                    matched_combination_jsons.append(j_file)
+
+            current_angle_jsons = [jf for jf in matched_combination_jsons if f"_{current_angle}_" in jf.name]
+            if not current_angle_jsons:
+                has_real_file_missing = True
+
+
+        # 3. 최종 어노테이션 누락 판정
+        if has_real_file_missing:
+            mismatch_files.append(img_path)
+
+    # 전체 유니크 이미지 세트에서 누락된 이미지 세트를 완벽하게 차집합 연산
+    final_clean_images = list(set(img_files) - set(mismatch_files))
+
+    print(f"- 어노테이션 누락 파일: {len(mismatch_files)}장")
+    print(f"- 최종 정제: {len(final_clean_images)}장")
 
     # 3. 데이터셋 분할 및 YOLO 변환
     print(f"\n--- 3. 데이터셋 분할 및 YOLO 변환 ---")
     train_list, val_list = train_test_split(final_clean_images, test_size=0.2, random_state=42)
-    print(f"분할 완료: 학습용 {len(train_list)}장, 검증용 {len(val_list)}장")
+    print(f"- 분할 완료: 학습용 {len(train_list)}장, 검증용 {len(val_list)}장")
 
     for split in ['train', 'val']:
         (OUTPUT_DIR / split / 'images').mkdir(parents=True, exist_ok=True)
@@ -111,7 +140,7 @@ def data_load(base_path='/content/project_team4/data/sprint_ai_project1_data',
                 with open(OUTPUT_DIR / split_name / 'labels' / f"{stem}.txt", 'w', encoding='utf-8') as f:
                     f.write("\n".join(list(set(yolo_labels))))
                 count += 1
-        print(f"{split_name} 처리 완료: {count}장 저장됨")
+        print(f"- {split_name} 처리 완료: {count}장 저장됨")
 
     convert_to_yolo(train_list, 'train')
     convert_to_yolo(val_list, 'val')
@@ -123,11 +152,12 @@ def data_load(base_path='/content/project_team4/data/sprint_ai_project1_data',
     # 4. 데이터 증강 (Train)
 
     print(f"\n--- 4. 데이터 증강 모드 ---")
+    print(f"- 증강 대상: 알약 클래스 인스턴스가 {target_count}개 이하인 알약")
     aug_pipeline = A.Compose([
-        A.HorizontalFlip(p=0.5), 
-        A.VerticalFlip(p=0.5), 
+        A.HorizontalFlip(p=0.5),
+        A.VerticalFlip(p=0.5),
         A.RandomRotate90(p=0.5),
-        A.RandomBrightnessContrast(p=0.2), 
+        A.RandomBrightnessContrast(p=0.2),
         A.GaussianBlur(p=0.1),
         A.HueSaturationValue(10, 15, 10, p=0.1)
     ], bbox_params=A.BboxParams(format='yolo', label_fields=['class_labels']))
