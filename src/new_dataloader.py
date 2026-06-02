@@ -124,12 +124,12 @@ def data_load(base_path='/content/project_team4/data/sprint_ai_project1_data',
 
     print(f"\n--- 4. 데이터 증강 모드 ---")
     aug_pipeline = A.Compose([
-        A.HorizontalFlip(0.5), 
-        A.VerticalFlip(0.5), 
-        A.RandomRotate90(0.5),
-        A.RandomBrightnessContrast(0.2), 
-        A.GaussianBlur(0.1),
-        A.HueSaturationValue(10, 15, 10, 0.1)
+        A.HorizontalFlip(p=0.5), 
+        A.VerticalFlip(p=0.5), 
+        A.RandomRotate90(p=0.5),
+        A.RandomBrightnessContrast(p=0.2), 
+        A.GaussianBlur(p=0.1),
+        A.HueSaturationValue(10, 15, 10, p=0.1)
     ], bbox_params=A.BboxParams(format='yolo', label_fields=['class_labels']))
 
     train_img_dir, train_lbl_dir = OUTPUT_DIR / 'train' / 'images', OUTPUT_DIR / 'train' / 'labels'
