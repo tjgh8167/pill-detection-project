@@ -214,7 +214,7 @@ def data_load(base_path='/content/project_team4/data/sprint_ai_project1_data',
                         f.write(f"{label} {' '.join(map(lambda x: f'{x:.6f}', box))}\n")
             except: continue
 
-    print("모든 전처리 및 증강 파이프라인이 완료되었습니다!")
+    print("모든 전처리 및 증강 파이프라인이 완료되었습니다.")
 
     return class_names, class_map, OUTPUT_DIR
 

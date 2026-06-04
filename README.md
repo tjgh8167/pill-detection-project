@@ -12,10 +12,9 @@
 
 | 이름 | 역할 | 주요 업무 |
 | :--- | :--- | :--- |
-| **정서호** | **Project Manager** | 프로젝트 일정 관리, 데일리 스크럼 주도, GitHub/Notion 환경 세팅 및 파이프라인 총괄, 발표 자료 제작 |
-| **김윤현** | **Data Engineer** | 알약 이미지 데이터셋 검수, 데이터 전처리/변환, 데이터 셋/로더 파이프라인 구축 |
-| **박종선** | **Model Architect** | 알약 검출을 위한 객체 검출 모델 선택, 베이스라인 코드 구현 및 개선 |
-| **권소현** | **Experimentation Lead** | 하이퍼파라미터 튜닝, 모델 실험, 이미지 시각화, 오차 분석(Error Analysis) 및 실험 결과(mAP) 기록 및 최적화 |
+| **정서호** | **PM/DE** | 프로젝트 일정 관리, 데일리 스크럼 주도, GitHub/Notion 환경 세팅 및 파이프라인 총괄, 발표 자료 제작, 데이터 셋/로더 파이프라인 구축, 데이터 전처리 변환 |
+| **박종선** | **MA** | 알약 검출을 위한 객체 검출 모델 선택, 베이스라인 코드 구현 및 개선 |
+| **권소현** | **EL** | 하이퍼파라미터 튜닝, 모델 실험 및 기록, 이미지 시각화, 오차 분석(Error Analysis) 및 실험 결과(mAP) 기록 및 파라미터 최적화 |
 
 
 ## 3. 프로젝트 구조
@@ -48,8 +47,9 @@ project_team4-/
 └── README.md                       # 프로젝트 설명서
 ```
 
-## 4. 팀원 협업일지
+## 4. 팀 문서
 
-| 이름 | 협업일지 링크 |
+| 목록| 협업일지 링크 |
 | :--- | :--- |
 | **협업일지** |[링크](https://docs.google.com/spreadsheets/d/17k2NNIQL951lEIIPhnsUgdwL5cIskf00ocd0drbfYgM/edit?gid=203327972#gid=203327972) |
+| **보고서** |[링크](https://drive.google.com/drive/folders/1fV5U3a8G8sc8LJ7likgKH3rwgxokPT_q?usp=sharing) |
