@@ -46,7 +46,7 @@
 ### 3. YOLO 포맷 변환 및 증강
 
 - 원본 JSON bbox를 YOLO 학습 형식으로 변환했습니다.
-- train/validation split을 구성하고 실행 시 `data.yaml`을 자동 생성했습니다.
+- train/validation split을 구성하고 실행 시 `data/data.yaml`을 자동 생성했습니다.
 - 소수 클래스 인스턴스가 부족한 경우 Albumentations로 증강했습니다.
 
 ### 4. 학습 및 제출 자동화
@@ -125,6 +125,12 @@ python submission.py
 이 프로젝트를 통해 객체 탐지 성능은 모델 선택이나 하이퍼파라미터만으로 결정되지 않는다는 점을 확인했습니다. 성능이 0.95점대에서 정체되었을 때 이미지와 어노테이션의 연결 상태를 다시 검증했고, 누락 데이터를 제거한 뒤 학습 파이프라인을 안정화했습니다.
 
 결과적으로 데이터 품질 검증, 학습 실행, 제출 파일 생성까지 이어지는 전체 흐름을 점검하면서 모델 결과가 실제 평가 지표로 이어지기 위해 필요한 과정을 경험했습니다.
+
+## 개발 기록
+
+프로젝트 진행 중 모델 학습 조건과 평가 결과를 스프레드시트로 기록했습니다.
+
+- [모델 학습 기록](https://docs.google.com/spreadsheets/d/1U4qyWUExOY1XkClypSRQiYkh8dJyMAh95fm_dxZuWO4/edit?gid=791871327#gid=791871327): YOLOv11 N/M/L 모델 비교, batch size, epoch, learning rate, confidence threshold, mAP, Kaggle Public Score 변화 기록
 
 ## 관련 문서
 
