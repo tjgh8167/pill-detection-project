@@ -138,4 +138,3 @@ python submission.py
 - [모델 선정 과정](docs/model_selection.md)
 - [데이터 품질 개선 과정](docs/data_quality.md)
 - [실험 및 결과 요약](docs/experiment_summary.md)
-- [협업일지](https://docs.google.com/spreadsheets/d/17k2NNIQL951lEIIPhnsUgdwL5cIskf00ocd0drbfYgM/edit?gid=203327972#gid=203327972)
