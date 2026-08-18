@@ -46,7 +46,7 @@
 ### 3. YOLO 포맷 변환 및 증강
 
 - 원본 JSON bbox를 YOLO 학습 형식으로 변환했습니다.
-- train/validation split을 구성하고 `data.yaml`을 자동 생성했습니다.
+- train/validation split을 구성하고 실행 시 `data.yaml`을 자동 생성했습니다.
 - 소수 클래스 인스턴스가 부족한 경우 Albumentations로 증강했습니다.
 
 ### 4. 학습 및 제출 자동화
