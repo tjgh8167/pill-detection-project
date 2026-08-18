@@ -1,10 +1,41 @@
+# Data and model artifacts
 data/
 saved_models/
+models/
+weights/
 *.pt
-.DS_Store
-__pycache__/
-*.pyc
-*.jpg
-*.png
+*.pth
+*.onnx
+
+# Generated outputs
+outputs/
+runs/
+results/
+submissions/
 *.csv
 *.txt
+!requirements.txt
+
+# Image files are excluded by default because the dataset is not redistributed.
+*.jpg
+*.jpeg
+*.png
+
+# Python
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# Notebook
+.ipynb_checkpoints/
+
+# Environment
+.env
+.venv/
+venv/
+
+# OS
+.DS_Store
+Thumbs.db
